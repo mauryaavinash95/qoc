@@ -2,9 +2,8 @@
 controlarea.py - This module defines a cost function that penalizes
 the "area under the curve" of the control parameters.
 """
-
-import autograd.numpy as anp
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 from qoc.models import (Cost,)
 
@@ -61,7 +60,7 @@ class ControlArea(Cost):
         # over the evolution time.
         cost = 0
         for i in range(self.control_count):
-            cost = cost + anp.abs(anp.sum(normalized_controls[:, i]))
+            cost = cost + jnp.abs(jnp.sum(normalized_controls[:, i]))
         cost_normalized = cost / self.control_size
 
         return cost_normalized * self.cost_multiplier
