@@ -2,9 +2,8 @@
 forbidstates.py - This module defines a cost function that penalizes
 the occupation of a set of forbidden states.
 """
-
-import autograd.numpy as anp
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 from qoc.models import Cost
 from qoc.standard.functions.convenience import conjugate_transpose
@@ -39,9 +38,9 @@ class ForbidStates(Cost):
         """
         super().__init__(cost_multiplier=cost_multiplier)
         state_count = forbidden_states.shape[0]
-        cost_evaluation_count, _ = np.divmod(system_eval_count - 1, cost_eval_step)
+        cost_evaluation_count, _ = jnp.divmod(system_eval_count - 1, cost_eval_step)
         self.cost_normalization_constant = cost_evaluation_count * state_count
-        self.forbidden_states_count = np.array([forbidden_states_.shape[0]
+        self.forbidden_states_count = jnp.array([forbidden_states_.shape[0]
                                                 for forbidden_states_
                                                 in forbidden_states])
         self.forbidden_states_dagger = conjugate_transpose(forbidden_states)
@@ -66,8 +65,8 @@ class ForbidStates(Cost):
             state = states[i]
             state_cost = 0
             for forbidden_state_dagger in forbidden_states_dagger_:
-                inner_product = anp.matmul(forbidden_state_dagger, state)[0, 0]
-                fidelity = anp.real(inner_product * anp.conjugate(inner_product))
+                inner_product = jnp.matmul(forbidden_state_dagger, state)[0, 0]
+                fidelity = jnp.real(inner_product * jnp.conjugate(inner_product))
                 state_cost = state_cost + fidelity
             #ENDFOR
             state_cost_normalized = state_cost / self.forbidden_states_count[i]
