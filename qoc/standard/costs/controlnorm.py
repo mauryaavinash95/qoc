@@ -3,8 +3,8 @@ controlnorm.py - This module defines a cost function that penalizes
 the value of the norm of the control parameters.
 """
 
-import autograd.numpy as anp
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 from qoc.models import Cost
 
@@ -67,7 +67,7 @@ class ControlNorm(Cost):
 
         # The cost is the sum of the square of the modulus of the normalized,
         # weighted, controls.
-        cost = anp.sum(anp.real(controls * anp.conjugate(controls)))
+        cost = jnp.sum(jnp.real(controls * jnp.conjugate(controls)))
         cost_normalized = cost / self.controls_size
         
         return cost_normalized * self.cost_multiplier
