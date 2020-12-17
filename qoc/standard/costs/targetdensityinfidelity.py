@@ -3,8 +3,8 @@ targetdensityinfidelity.py - This module defines a cost function that
 penalizes the infidelity of an evolved density and a target density.
 """
 
-import autograd.numpy as anp
-import numpy as np
+import jax
+import jax.numpy as np
 
 from qoc.models import Cost
 from qoc.standard.functions import conjugate_transpose
@@ -57,11 +57,11 @@ class TargetDensityInfidelity(Cost):
         # The following computations are equivalent to:
         # inner_products = (anp.trace(anp.matmul(self.target_densities_dagger, densities),
         #                             axis1=-1, axis2=-2) / self.hilbert_size)
-        prods = anp.matmul(self.target_densities_dagger, densities)
+        prods = np.matmul(self.target_densities_dagger, densities)
         fidelity_sum = 0
         for i, prod in enumerate(prods):
-            inner_prod = anp.trace(prod)
-            fidelity = anp.abs(inner_prod)
+            inner_prod = np.trace(prod)
+            fidelity = np.abs(inner_prod)
             fidelity_sum = fidelity_sum + fidelity
         fidelity_normalized = fidelity_sum / (self.density_count * self.hilbert_size)
         infidelity = 1 - fidelity_normalized
