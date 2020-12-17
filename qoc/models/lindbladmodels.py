@@ -6,7 +6,8 @@ programs involving lindblad evolution
 
 from filelock import FileLock, Timeout
 import h5py
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 from qoc.models.programtype import ProgramType
 from qoc.models.programstate import (GrapeState, ProgramState,)
@@ -69,15 +70,15 @@ class EvolveLindbladDiscreteState(ProgramState):
                     with h5py.File(self.save_file_path, "w") as save_file:
                         save_file["controls"] = controls
                         save_file["cost_eval_step"] = self.cost_eval_step
-                        save_file["costs"] = np.array(["{}".format(cost)
+                        save_file["costs"] = jnp.array(["{}".format(cost)
                                                        for cost in self.costs])
                         save_file["evolution_time"] = self.evolution_time
                         save_file["initial_densities"] = self.initial_densities
                         save_file["interpolation_policy"] = "{}".format(self.interpolation_policy)
                         if self.save_intermediate_densities_:
-                            save_file["intermediate_densities"] = np.zeros((self.system_eval_count,
+                            save_file["intermediate_densities"] = jnp.zeros((self.system_eval_count,
                                                                             *self.initial_densities.shape),
-                                                                           dtype=np.complex128)
+                                                                           dtype=jnp.complex128)
                         save_file["method"] = self.method
                         save_file["program_type"] = self.program_type.value
                         save_file["system_eval_count"] = self.system_eval_count
@@ -226,17 +227,17 @@ class GrapeLindbladDiscreteState(GrapeState):
         is_final_iteration = iteration == self.final_iteration
         
         if (self.should_log
-            and ((np.mod(iteration, self.log_iteration_step) == 0)
+            and ((jnp.mod(iteration, self.log_iteration_step) == 0)
                  or is_final_iteration)):
-            grads_norm = np.linalg.norm(grads)
+            grads_norm = jnp.linalg.norm(grads)
             print("{:^6d} | {:^1.8e} | {:^1.8e}"
                   "".format(iteration, error,
                             grads_norm))
 
         if (self.should_save
-            and ((np.mod(iteration, self.save_iteration_step) == 0)
+            and ((jnp.mod(iteration, self.save_iteration_step) == 0)
                  or is_final_iteration)):
-            save_step, _ = np.divmod(iteration, self.save_iteration_step)
+            save_step, _ = jnp.divmod(iteration, self.save_iteration_step)
             try:
                 with FileLock(self.save_file_lock_path):
                     with h5py.File(self.save_file_path, "a") as save_file:
@@ -260,7 +261,7 @@ class GrapeLindbladDiscreteState(GrapeState):
             print("QOC is saving this optimization run to {}."
                   "".format(self.save_file_path))
 
-            save_count, save_count_remainder = np.divmod(self.iteration_count,
+            save_count, save_count_remainder = jnp.divmod(self.iteration_count,
                                                          self.save_iteration_step)
             density_count = len(self.initial_densities)
             # If the final iteration doesn't fall on a save step, add a save step.
@@ -273,26 +274,26 @@ class GrapeLindbladDiscreteState(GrapeState):
                         save_file["complex_controls"] = self.complex_controls
                         save_file["control_count"] = self.control_count
                         save_file["control_eval_count"] = self.control_eval_count
-                        save_file["controls"] = np.zeros((save_count, self.control_eval_count,
+                        save_file["controls"] = jnp.zeros((save_count, self.control_eval_count,
                                                           self.control_count,),
                                                          dtype=self.initial_controls.dtype)
                         save_file["cost_eval_step"] = self.cost_eval_step
-                        save_file["cost_names"] = np.array([np.string_("{}".format(cost))
+                        save_file["cost_names"] = jnp.array([jnp.string_("{}".format(cost))
                                                             for cost in self.costs])
-                        save_file["error"] = np.repeat(np.finfo(np.float64).max, save_count)
+                        save_file["error"] = jnp.repeat(jnp.finfo(jnp.float64).max, save_count)
                         save_file["evolution_time"]= self.evolution_time
-                        save_file["final_densities"] = np.zeros((save_count, density_count,
+                        save_file["final_densities"] = jnp.zeros((save_count, density_count,
                                                                  self.hilbert_size, self.hilbert_size),
-                                                                dtype=np.complex128)
-                        save_file["grads"] = np.zeros((save_count, self.control_eval_count,
+                                                                dtype=jnp.complex128)
+                        save_file["grads"] = jnp.zeros((save_count, self.control_eval_count,
                                                        self.control_count), dtype=self.initial_controls.dtype)
                         save_file["initial_controls"] = self.initial_controls
                         save_file["initial_densities"] = self.initial_densities
                         if self.save_intermediate_densities_:
-                            save_file["intermediate_densities"] = np.zeros((save_count,
+                            save_file["intermediate_densities"] = jnp.zeros((save_count,
                                                                             self.system_eval_count,
                                                                             *self.initial_densities.shape),
-                                                                           dtype=np.complex128)
+                                                                           dtype=jnp.complex128)
                         save_file["interpolation_policy"] = "{}".format(self.interpolation_policy)
                         save_file["iteration_count"] = self.iteration_count
                         save_file["max_control_norms"] = self.max_control_norms
@@ -325,13 +326,13 @@ class GrapeLindbladDiscreteState(GrapeState):
         is_final_iteration = iteration == self.final_iteration
 
         if (self.should_save
-            and ((np.mod(iteration, self.save_iteration_step) == 0)
+            and ((jnp.mod(iteration, self.save_iteration_step) == 0)
                  or is_final_iteration)):
-            save_step, _ = np.divmod(iteration, self.save_iteration_step)
+            save_step, _ = jnp.divmod(iteration, self.save_iteration_step)
             try:
                 with FileLock(self.save_file_lock_path):
                     with h5py.File(self.save_file_path, "a") as save_file:
-                        save_file["intermediate_densities"][iteration, system_eval_step, :, :, :] = densities.astype(np.complex128)
+                        save_file["intermediate_densities"][iteration, system_eval_step, :, :, :] = densities.astype(jnp.complex128)
             except Timeout:
                 print("Timeout while locking {} while saving intermediate densities on iteration {} and "
                       "system_eval_step {}."
@@ -352,7 +353,7 @@ class GrapeLindbladResult(object):
     best_iteration
     """
     def __init__(self, best_controls=None,
-                 best_error=np.finfo(np.float64).max,
+                 best_error=jnp.finfo(jnp.float64).max,
                  best_final_densities=None,
                  best_iteration=None,):
         """
