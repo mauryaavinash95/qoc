@@ -3,8 +3,8 @@ forbiddensities.py - This module defines a cost function
 that penalizes the occupation of a set of forbidden densities.
 """
 
-import autograd.numpy as anp
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 from qoc.models.cost import Cost
 from qoc.standard.functions.convenience import conjugate_transpose
@@ -41,9 +41,9 @@ class ForbidDensities(Cost):
         """
         super().__init__(cost_multiplier=cost_multiplier)
         density_count = forbidden_densities.shape[0]
-        cost_evaluation_count, _ = np.divmod(system_eval_count - 1, cost_eval_step)
+        cost_evaluation_count, _ = jnp.divmod(system_eval_count - 1, cost_eval_step)
         self.cost_normalization_constant = cost_evaluation_count * density_count
-        self.forbidden_densities_count = np.array([forbidden_densities_.shape[0]
+        self.forbidden_densities_count = jnp.array([forbidden_densities_.shape[0]
                                                    for forbidden_densities_
                                                    in forbidden_densities])
         self.forbidden_densities_dagger = conjugate_transpose(forbidden_densities)
@@ -69,9 +69,9 @@ class ForbidDensities(Cost):
             density = densities[i]
             density_cost = 0
             for forbidden_density_dagger in forbidden_densities_dagger_:
-                inner_product = (anp.trace(anp.matmul(forbidden_density_dagger,
+                inner_product = (jnp.trace(jnp.matmul(forbidden_density_dagger,
                                                       density)) / self.hilbert_size)
-                fidelity = anp.real(inner_product * anp.conjugate(inner_product))
+                fidelity = jnp.real(inner_product * jnp.conjugate(inner_product))
                 density_cost = density_cost + fidelity
             #ENDFOR
             density_cost_normalized = density_cost / self.forbidden_densities_count[i]
