@@ -5,8 +5,8 @@ lindblad master equation using time-discrete
 control parameters.
 """
 
-from autograd.extend import Box
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 from qoc.core.common import (clip_control_norms,
                              initialize_controls,
@@ -324,7 +324,7 @@ def _eldj_wrap(controls, pstate, reporter, result):
     # df_dz = du_dx - i * du_dy for z = x + iy, f(z) = u(x, y) + iv(x, y).
     # For optimization, we care about df_dz = du_dx + i * du_dy.
     if pstate.complex_controls:
-        grads = np.conjugate(grads)
+        grads = jnp.conjugate(grads)
 
     # The densities need to be unwrapped from their autograd box.
     if isinstance(reporter.final_densities, Box):
@@ -424,7 +424,7 @@ def _evaluate_lindblad_discrete(controls, pstate, reporter):
         
         # Evolve the densities to the next time step.
         if not is_final_system_eval_step:
-            densities = integrate_rkdp5(rhs_lindbladian, np.array([time + dt]),
+            densities = integrate_rkdp5(rhs_lindbladian, jnp.array([time + dt]),
                                         time, densities)
     #ENDFOR
 
