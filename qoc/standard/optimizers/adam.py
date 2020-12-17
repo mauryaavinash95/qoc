@@ -2,7 +2,8 @@
 adam.py - a module for defining the Adam optimizer
 """
 
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 from qoc.models.operationpolicy import OperationPolicy
 
@@ -96,8 +97,8 @@ class Adam(object):
         Returns: none
         """
         self.iteration_count = 0
-        self.gradient_moment = np.zeros_like(initial_params)
-        self.gradient_square_moment = np.zeros_like(initial_params)
+        self.gradient_moment = jnp.zeros_like(initial_params)
+        self.gradient_square_moment = jnp.zeros_like(initial_params)
 
         params = initial_params
         for i in range(iteration_count):
@@ -131,19 +132,19 @@ class Adam(object):
         # Apply learning rate decay.
         if self.apply_learning_rate_decay:
             learning_rate = (self.initial_learning_rate
-                             * np.exp(-np.divide(self.iteration_count,
+                             * jnp.exp(-jnp.divide(self.iteration_count,
                                                  self.learning_rate_decay)))
         else:
             learning_rate = self.initial_learning_rate
 
         # Apply gradient scaling (before clipping).
         if self.apply_scale_grads:
-            grads_norm = np.linalg.norm(grads)
+            grads_norm = jnp.linalg.norm(grads)
             grads = (grads / grads_norm) * self.scale_grads
 
         # Apply gradient clipping.
         if self.apply_clip_grads:
-            grads = np.clip(grads, -self.clip_grads, self.clip_grads)
+            grads = jnp.clip(grads, -self.clip_grads, self.clip_grads)
 
 
         # Do the vanilla update procedure.
@@ -154,12 +155,12 @@ class Adam(object):
         self.gradient_moment = (beta_1 * self.gradient_moment
                                 + (1 - beta_1) * grads)
         self.gradient_square_moment = (beta_2 * self.gradient_square_moment
-                                       + (1 - beta_2) * np.square(grads))
-        gradient_moment_hat = np.divide(self.gradient_moment,
-                                        1 - np.power(beta_1, iteration_count))
-        gradient_square_moment_hat = np.divide(self.gradient_square_moment,
-                                               1 - np.power(beta_2, iteration_count))
+                                       + (1 - beta_2) * jnp.square(grads))
+        gradient_moment_hat = jnp.divide(self.gradient_moment,
+                                        1 - jnp.power(beta_1, iteration_count))
+        gradient_square_moment_hat = jnp.divide(self.gradient_square_moment,
+                                               1 - jnp.power(beta_2, iteration_count))
         
-        return params - learning_rate * np.divide(gradient_moment_hat,
-                                                  np.sqrt(gradient_square_moment_hat)
+        return params - learning_rate * jnp.divide(gradient_moment_hat,
+                                                  jnp.sqrt(gradient_square_moment_hat)
                                                   + self.epsilon)
