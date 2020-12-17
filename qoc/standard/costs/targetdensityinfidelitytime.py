@@ -4,8 +4,8 @@ that penalizes the infidelity of evolved densities and their
 respective target densities at each cost evaluation step.
 """
 
-import autograd.numpy as anp
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 from qoc.models import Cost
 from qoc.standard.functions import conjugate_transpose
@@ -38,10 +38,10 @@ class TargetDensityInfidelityTime(Cost):
         target_densities
         """
         super().__init__(cost_multiplier=cost_multiplier)
-        self.cost_eval_count, _ = np.divmod(system_eval_count - 1, cost_eval_step)
+        self.cost_eval_count, _ = jnp.divmod(system_eval_count - 1, cost_eval_step)
         self.density_count = target_densities.shape[0]
         self.hilbert_size = target_densities.shape[1]
-        self.target_densities_dagger = conjugate_transpose(np.stack(target_densities))
+        self.target_densities_dagger = conjugate_transpose(jnp.stack(target_densities))
 
 
     def cost(self, controls, densities, sytem_eval_step):
@@ -57,17 +57,17 @@ class TargetDensityInfidelityTime(Cost):
         cost
         """
         # The cost is the infidelity of each evolved density and its target density.
-        # NOTE: Autograd doesn't support vjps of anp.trace with axis arguments.
-        # Nor does it support the vjp of anp.einsum(...ii->..., a).
+        # NOTE: Autograd doesn't support vjps of np.trace with axis arguments.
+        # Nor does it support the vjp of np.einsum(...ii->..., a).
         # Therefore, we must use a for loop to index the traces.
         # The following computations are equivalent to:
-        # inner_products = (anp.trace(anp.matmul(self.target_densities_dagger, densities),
+        # inner_products = (np.trace(np.matmul(self.target_densities_dagger, densities),
         #                             axis1=-1, axis2=-2) / self.hilbert_size)
-        prods = anp.matmul(self.target_densities_dagger, densities)
+        prods = jnp.matmul(self.target_densities_dagger, densities)
         fidelity_sum = 0
         for i, prod in enumerate(prods):
-            inner_prod = anp.trace(prod)
-            fidelity = anp.abs(inner_prod)
+            inner_prod = jnp.trace(prod)
+            fidelity = jnp.abs(inner_prod)
             fidelity_sum = fidelity_sum + fidelity
         fidelity_normalized = fidelity_sum / (self.density_count * self.hilbert_size)
         infidelity = 1 - fidelity_normalized
