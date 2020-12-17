@@ -2,7 +2,7 @@
 sgd.py - a module for defining the Stochastic Gradient Descent optimizer
 """
 
-import numpy as np
+import numpy as onp
 
 class SGD(object):
     """
