@@ -3,7 +3,9 @@ common.py - This module defines methods that are used by
 multiple core functionalities.
 """
 
-import numpy as np
+import jax
+import jax.numpy as jnp
+import numpy as onp
 
 def clip_control_norms(controls, max_control_norms):
     """
@@ -20,14 +22,16 @@ def clip_control_norms(controls, max_control_norms):
     """
     for i, max_control_norm in enumerate(max_control_norms):
         control = controls[:, i]
-        control_norm = np.abs(control)
-        offending_indices = np.nonzero(np.less(max_control_norm, control_norm))
-        offending_control_points = control[offending_indices]
-        # Rescale the offending points to `max_control_norm`.
-        resolved_control_points = ((offending_control_points / control_norm[offending_indices])
+        control_norm = jnp.abs(control)
+        offending_indices = onp.nonzero(onp.less(max_control_norm, control_norm))
+        bool_mcn_lt_cn = jnp.less(max_control_norm, control_norm)
+        offending_control_points = control * bool_mcn_lt_cn
+        resolved_control_points = ((offending_control_points / control_norm)
                                    * max_control_norm)
-        control[offending_indices] = resolved_control_points
+        resolved_control_points1 = jnp.where(resolved_control_points!=0.0, resolved_control_points, controls[:,i])
+        controls = jax.ops.index_update(controls, jax.ops.index[:,i], resolved_control_points1)
     #ENDFOR
+    return controls
 
 
 def gen_controls_cos(complex_controls, control_count, control_eval_count,
@@ -48,9 +52,9 @@ def gen_controls_cos(complex_controls, control_count, control_eval_count,
     Returns:
     controls
     """
-    period = np.divide(control_eval_count, periods)
-    b = np.divide(2 * np.pi, period)
-    controls = np.zeros((control_eval_count, control_count))
+    period = jnp.divide(control_eval_count, periods)
+    b = jnp.divide(2 * jnp.pi, period)
+    controls = jnp.zeros((control_eval_count, control_count))
     
     # Create a wave for each control over all time
     # and add it to the controls.
@@ -58,18 +62,18 @@ def gen_controls_cos(complex_controls, control_count, control_eval_count,
         # Generate a cosine wave about y=0 with amplitude
         # half of the max.
         max_norm = max_control_norms[i]
-        _controls = (np.divide(max_norm, 2)
-                   * np.cos(b * np.arange(control_eval_count)))
+        _controls = (jnp.divide(max_norm, 2)
+                   * jnp.cos(b * jnp.arange(control_eval_count)))
         # Replace all controls that have zero value
         # with small values.
         small_norm = max_norm * 1e-1
-        _controls = np.where(_controls, _controls, small_norm)
+        _controls = jnp.where(_controls, _controls, small_norm)
         controls[:, i] = _controls
     #ENDFOR
 
     # Mimic the cosine fit for the imaginary parts and normalize.
     if complex_controls:
-        controls = (controls - 1j * controls) / np.sqrt(2)
+        controls = (controls - 1j * controls) / jnp.sqrt(2)
 
     return controls
 
@@ -90,22 +94,21 @@ def gen_controls_white(complex_controls, control_count, control_eval_count,
     Returns:
     controls
     """
-    controls = np.zeros((control_eval_count, control_count))
+    controls = jnp.zeros((control_eval_count, control_count))
 
     # Make each control a random distribution of white noise.
     for i in range(control_count):
         max_norm = max_control_norms[i]
         stddev = max_norm/5.0
-        control = np.random.normal(0, stddev, control_eval_count)
+        control = jnp.random.normal(0, stddev, control_eval_count)
         controls[:, i] = control
     #ENDFOR
 
     # Mimic the white noise for the imaginary parts, and normalize.
     if complex_controls:
-        controls = (controls - 1j * controls) / np.sqrt(2)
+        controls = (controls - 1j * controls) / jnp.sqrt(2)
 
     return controls
-
 
 def gen_controls_flat(complex_controls, control_count, control_eval_count,
                       evolution_time, max_control_norms, periods=10.):
@@ -125,19 +128,19 @@ def gen_controls_flat(complex_controls, control_count, control_eval_count,
     Returns:
     controls
     """
-    controls = np.zeros((control_eval_count, control_count))
+    controls = jnp.zeros((control_eval_count, control_count))
 
     # Make each control a flat line for all time.
     for i in range(control_count):
         max_norm = max_control_norms[i]
         small_norm = max_norm * 1e-1
-        control = np.repeat(small_norm, control_eval_count)
-        controls[:, i] = control
+        control = jnp.repeat(small_norm, control_eval_count)
+        controls = jax.ops.index_update(controls, jax.ops.index[:,i], control)
     #ENDFOR
 
     # Mimic the flat line for the imaginary parts, and normalize.
     if complex_controls:
-        controls = (controls - 1j * controls) / np.sqrt(2)
+        controls = (controls - 1j * controls) / jnp.sqrt(2)
 
     return controls
 
@@ -164,7 +167,7 @@ def initialize_controls(complex_controls,
     max_control_norms
     """
     if max_control_norms is None:
-        max_control_norms = np.ones(control_count)
+        max_control_norms = jnp.ones(control_count)
         
     if initial_controls is None:
         controls = gen_controls_flat(complex_controls, control_count, control_eval_count,
@@ -172,13 +175,13 @@ def initialize_controls(complex_controls,
     else:
         # Check that the user-specified controls match the specified data type.
         if complex_controls:
-            if not np.iscomplexobj(initial_controls):
+            if not jnp.iscomplexobj(initial_controls):
                 raise ValueError("The program expected that the initial_controls specified by "
                                  "the user conformed to complex_controls, but "
                                  "the program found that the initial_controls were not complex "
                                  "and complex_controls was set to True.")
         else:
-            if np.iscomplexobj(initial_controls):
+            if jnp.iscomplexobj(initial_controls):
                 raise ValueError("The program expected that the initial_controls specified by "
                                  "the user conformed to complex_controls, but "
                                  "the program found that the initial_controls were complex "
@@ -186,7 +189,7 @@ def initialize_controls(complex_controls,
         
         # Check that the user-specified controls conform to max_control_norms.
         for control_step, step_controls in enumerate(initial_controls):
-            if not (np.less_equal(np.abs(step_controls), max_control_norms + _NORM_TOLERANCE).all()):
+            if not (jnp.less_equal(jnp.abs(step_controls), max_control_norms + _NORM_TOLERANCE).all()):
                 raise ValueError("The program expected that the initial_controls specified by "
                                  "the user conformed to max_control_norms, but the program "
                                  "found a conflict at initial_controls[{}]={} and "
@@ -215,10 +218,10 @@ def slap_controls(complex_controls, controls, controls_shape,):
     """
     # Transform the controls to C if they are complex.
     if complex_controls:
-        real, imag = np.split(controls, 2)
+        real, imag = jnp.split(controls, 2)
         controls = real + 1j * imag
     # Reshape the controls.
-    controls = np.reshape(controls, controls_shape)
+    controls = jnp.reshape(controls, controls_shape)
     
     return controls
 
@@ -238,9 +241,9 @@ def strip_controls(complex_controls, controls):
         - the controls in optimizer format
     """
     # Flatten the controls.
-    controls = np.ravel(controls)
+    controls = jnp.ravel(controls)
     # Transform the controls to R2 if they are complex.
     if complex_controls:
-        controls = np.hstack((np.real(controls), np.imag(controls)))
+        controls = jnp.hstack((jnp.real(controls), jnp.imag(controls)))
     
     return controls
