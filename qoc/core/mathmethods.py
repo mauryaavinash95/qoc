@@ -2,8 +2,8 @@
 mathmethods.py - mathematical methods in physics
 """
 
-import autograd.numpy as anp
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 from qoc.standard.functions.convenience import (commutator, conjugate_transpose,
                                                 matmuls,
@@ -61,7 +61,7 @@ def interpolate_linear_set(x, xs, ys):
     # to x.
     else:
         # Index is the first occurence where x is l.e. an element of xs.
-        index = anp.argmax(x <= xs)
+        index = jnp.argmax(x <= xs)
         y = interpolate_linear_points(xs[index - 1], xs[index], x, ys[index - 1], ys[index])
         
     return y
@@ -93,9 +93,9 @@ def magnus_m2(a, dt, time):
     return m2
 
 
-_M4_C1 = 0.5 - np.divide(np.sqrt(3), 6)
-_M4_C2 = 0.5 + np.divide(np.sqrt(3), 6)
-_M4_F0 = np.divide(np.sqrt(3), 12)
+_M4_C1 = 0.5 - jnp.divide(jnp.sqrt(3), 6)
+_M4_C2 = 0.5 + jnp.divide(jnp.sqrt(3), 6)
+_M4_F0 = jnp.divide(jnp.sqrt(3), 12)
 
 def magnus_m4(a, dt, time):
     """
@@ -122,14 +122,14 @@ def magnus_m4(a, dt, time):
     return m4
 
 
-_M6_C1 = 0.5 - np.divide(np.sqrt(15), 10)
+_M6_C1 = 0.5 - jnp.divide(jnp.sqrt(15), 10)
 _M6_C2 = 0.5
-_M6_C3 = 0.5 + np.divide(np.sqrt(15), 10)
-_M6_F0 = np.divide(np.sqrt(15), 3)
-_M6_F1 = np.divide(10, 3)
-_M6_F2 = np.divide(1, 2)
-_M6_F3 = np.divide(1, 240)
-_M6_F4 = np.divide(1, 60)
+_M6_C3 = 0.5 + jnp.divide(jnp.sqrt(15), 10)
+_M6_F0 = jnp.divide(jnp.sqrt(15), 3)
+_M6_F1 = jnp.divide(10, 3)
+_M6_F2 = jnp.divide(1, 2)
+_M6_F3 = jnp.divide(1, 240)
+_M6_F4 = jnp.divide(1, 60)
 
 def magnus_m6(a, dt, time):
     """
@@ -256,7 +256,7 @@ D7 = 69997945 / 29380423
 # RKDP5(4) method constants.
 P = 5
 PH = 4
-Q = np.minimum(P, PH)
+Q = jnp.minimum(P, PH)
 ERROR_EXP = -1 / (Q + 1)
 
 
@@ -413,11 +413,11 @@ def integrate_rkdp5(rhs, x_eval, x_initial, y_initial,
     y1 = y_initial + h0 * f0
     f1 = rhs(x_initial + h0, y1)
     d2 = rms_norm(f1 - f0) / h0
-    if anp.maximum(d1, d2) <= 1e-15:
-        h1 = anp.maximum(1e-6, h0 * 1e-3)
+    if jnp.maximum(d1, d2) <= 1e-15:
+        h1 = jnp.maximum(1e-6, h0 * 1e-3)
     else:
-        h1 = anp.power(0.01 / anp.maximum(d1, d2), 1 / (P + 1))
-    step_current = anp.minimum(100 * h0, h1)
+        h1 = jnp.power(0.01 / jnp.maximum(d1, d2), 1 / (P + 1))
+    step_current = jnp.minimum(100 * h0, h1)
 
     # Integrate.
     y_eval_list = list()
@@ -438,7 +438,7 @@ def integrate_rkdp5(rhs, x_eval, x_initial, y_initial,
             # the current attempted step size places us in the mesh.
             x_new = x_current + step_current
             # Compute the local error associated with the attempted step.
-            scale = atol + anp.maximum(anp.abs(y1), anp.abs(y1h)) * rtol
+            scale = atol + jnp.maximum(jnp.abs(y1), jnp.abs(y1h)) * rtol
             error_norm = rms_norm((y1 - y1h) / scale)
 
             # If the step is accepted, increase the step size,
@@ -449,22 +449,22 @@ def integrate_rkdp5(rhs, x_eval, x_initial, y_initial,
                 if error_norm == 0:
                     step_update_factor = step_update_factor_max
                 else:
-                    step_update_factor = anp.minimum(step_update_factor_max,
-                                                     step_safety_factor * anp.power(error_norm, ERROR_EXP))
+                    step_update_factor = jnp.minimum(step_update_factor_max,
+                                                     step_safety_factor * jnp.power(error_norm, ERROR_EXP))
                 # Avoid an extraneous update in next step.
                 if step_rejected:
-                    step_update_factor = anp.minimum(1, step_update_factor)
+                    step_update_factor = jnp.minimum(1, step_update_factor)
                 step_current = step_current * step_update_factor
             # If the step was rejected, decrease the step size,
             # and reattempt the step.
             else:
                 step_rejected = True
-                step_update_factor = anp.maximum(step_update_factor_min,
-                                                 step_safety_factor * anp.power(error_norm, ERROR_EXP))
+                step_update_factor = jnp.maximum(step_update_factor_min,
+                                                 step_safety_factor * jnp.power(error_norm, ERROR_EXP))
                 step_current = step_current * step_update_factor
         #ENDWHILE
         # Interpolate any output points that ocurred in the step.
-        x_eval_step_indices = anp.nonzero(anp.logical_and(x_current <= x_eval, x_eval <= x_new))[0]
+        x_eval_step_indices = jnp.nonzero(jnp.logical_and(x_current <= x_eval, x_eval <= x_new))[0]
         x_eval_step = x_eval[x_eval_step_indices]
         if len(x_eval_step) != 0:
             y_eval_step = rkdp5_dense(ks, x_current, x_new, x_eval_step, y_current, y1)
@@ -477,4 +477,4 @@ def integrate_rkdp5(rhs, x_eval, x_initial, y_initial,
         k1 = ks[6] # k[6] = k7
     #ENDWHILE
     
-    return anp.stack(y_eval_list)
+    return jnp.stack(y_eval_list)
