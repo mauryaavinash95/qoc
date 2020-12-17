@@ -3,8 +3,7 @@ controlvariation.py - This module defines a cost function
 that penalizes variations of the control parameters.
 """
 
-import autograd.numpy as anp
-import numpy as np
+import jax
 
 from qoc.models import Cost
 
@@ -63,8 +62,8 @@ class ControlVariation(Cost):
 
         # Penalize the square of the absolute value of the difference
         # in value of the control parameters from one step to the next.
-        diffs = anp.diff(normalized_controls, axis=0, n=self.order)
-        cost = anp.sum(anp.real(diffs * anp.conjugate(diffs)))
+        diffs = np.diff(normalized_controls, axis=0, n=self.order)
+        cost = np.sum(np.real(diffs * np.conjugate(diffs)))
         # You can prove that the square of the complex modulus of the difference
         # between two complex values is l.t.e. 2 if the complex modulus
         # of the two complex values is l.t.e. 1 respectively using the
