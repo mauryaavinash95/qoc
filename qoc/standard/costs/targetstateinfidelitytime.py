@@ -4,8 +4,8 @@ penalizes the infidelity of evolved states and their respective target states
 at each cost evaluation step.
 """
 
-import autograd.numpy as anp
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 from qoc.models import Cost
 from qoc.standard.functions import conjugate_transpose
@@ -38,9 +38,9 @@ class TargetStateInfidelityTime(Cost):
         target_states
         """
         super().__init__(cost_multiplier=cost_multiplier)
-        self.cost_eval_count, _ = np.divmod(system_eval_count - 1, cost_eval_step)
+        self.cost_eval_count, _ = jnp.divmod(system_eval_count - 1, cost_eval_step)
         self.state_count = target_states.shape[0]
-        self.target_states_dagger = conjugate_transpose(anp.stack(target_states))
+        self.target_states_dagger = conjugate_transpose(jnp.stack(target_states))
 
 
     def cost(self, controls, states, system_eval_step):
@@ -56,9 +56,9 @@ class TargetStateInfidelityTime(Cost):
         cost
         """
         # The cost is the infidelity of each evolved state and its target state.
-        inner_products = anp.matmul(self.target_states_dagger, states)[:, 0, 0]
-        fidelities = anp.real(inner_products * anp.conjugate(inner_products))
-        fidelity_normalized = anp.sum(fidelities) / self.state_count
+        inner_products = jnp.matmul(self.target_states_dagger, states)[:, 0, 0]
+        fidelities = jnp.real(inner_products * jnp.conjugate(inner_products))
+        fidelity_normalized = jnp.sum(fidelities) / self.state_count
         infidelity = 1 - fidelity_normalized
         # Normalize the cost for the number of times the cost is evaluated.
         cost_normalized = infidelity / self.cost_eval_count
