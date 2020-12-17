@@ -2,15 +2,16 @@
 constants.py - This module defines constants.
 """
 
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 ### CONSTANTS ###
 
-SIGMA_X = np.array(((0, 1), (1, 0)))
-SIGMA_Y = np.array(((0, -1j), (1j, 0)))
-SIGMA_Z = np.array(((1, 0), (0, -1)))
-SIGMA_PLUS = np.array(((0, 2), (0, 0))) # SIGMA_X + i * SIGMA_Y
-SIGMA_MINUS = np.array(((0, 0), (2, 0))) # SIGMA_X - i * SIGMA_Y
+SIGMA_X = jnp.array(((0, 1), (1, 0)),dtype=jnp.complex64)
+SIGMA_Y = jnp.array(((0, -1j), (1j, 0)),dtype=jnp.complex64)
+SIGMA_Z = jnp.array(((1, 0), (0, -1)),dtype=jnp.complex64)
+SIGMA_PLUS = jnp.array(((0, 2), (0, 0)),dtype=jnp.complex64) # SIGMA_X + i * SIGMA_Y
+SIGMA_MINUS = jnp.array(((0, 0), (2, 0)),dtype=jnp.complex64) # SIGMA_X - i * SIGMA_Y
 
 
 ### GENERATIVE CONSTANTS ###
@@ -27,7 +28,7 @@ def get_creation_operator(size):
     creation_operator :: ndarray (size, size)
         - The creation operator at level `size`.
     """
-    return np.diag(np.sqrt(np.arange(1, size)), k=-1)
+    return jnp.diag(jnp.sqrt(jnp.arange(1, size)), k=-1)
 
 
 def get_annihilation_operator(size):
@@ -42,7 +43,7 @@ def get_annihilation_operator(size):
     annihilation_operator :: ndarray (size, size)
         - The annihilation operator at level `size`.
     """
-    return np.diag(np.sqrt(np.arange(1, size)), k=1)
+    return jnp.diag(jnp.sqrt(jnp.arange(1, size)), k=1)
 
 
 def get_eij(i, j, size):
@@ -60,6 +61,6 @@ def get_eij(i, j, size):
     eij :: ndarray (size, size)
         - The requested Eij matrix.
     """
-    eij = np.zeros((size, size))
+    eij = jnp.zeros((size, size),dtype=jnp.complex64)
     eij[i, j] = 1
     return eij
