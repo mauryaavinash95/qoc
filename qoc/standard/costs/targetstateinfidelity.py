@@ -3,8 +3,8 @@ targetstateinfidelity.py - This module defines a cost function that
 penalizes the infidelity of an evolved state and a target state.
 """
 
-import autograd.numpy as anp
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 from qoc.models import Cost
 from qoc.standard.functions import conjugate_transpose
@@ -49,9 +49,9 @@ class TargetStateInfidelity(Cost):
         cost
         """
         # The cost is the infidelity of each evolved state and its target state.
-        inner_products = anp.matmul(self.target_states_dagger, states)[:, 0, 0]
-        fidelities = anp.real(inner_products * anp.conjugate(inner_products))
-        fidelity_normalized = anp.sum(fidelities) / self.state_count
+        inner_products = jnp.matmul(self.target_states_dagger, states)[:, 0, 0]
+        fidelities = jnp.real(inner_products * jnp.conjugate(inner_products))
+        fidelity_normalized = jnp.sum(fidelities) / self.state_count
         infidelity = 1 - fidelity_normalized
         
         return infidelity * self.cost_multiplier
