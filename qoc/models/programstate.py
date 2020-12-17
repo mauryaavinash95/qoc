@@ -4,7 +4,8 @@ necessary to execute qoc programs.
 """
 
 from filelock import FileLock
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 from qoc.models.programtype import ProgramType
 
@@ -38,7 +39,7 @@ class ProgramState(object):
         See class fields for arguments not listed here.
         """
         self.control_eval_count = control_eval_count
-        self.control_eval_times = np.linspace(0, evolution_time, control_eval_count)
+        self.control_eval_times = jnp.linspace(0, evolution_time, control_eval_count)
         self.cost_eval_step = cost_eval_step
         self.costs = costs
         self.dt = evolution_time / (system_eval_count - 1)
