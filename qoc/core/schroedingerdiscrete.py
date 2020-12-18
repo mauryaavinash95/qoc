@@ -423,7 +423,7 @@ def _evaluate_schroedinger_discrete(controls, pstate, reporter):
 
         # Evolve the states to the next time step.
         if not is_final_system_eval_step:
-            states = _evolve_step_schroedinger_discrete(dt, pstate.UNITARY_SIZE,
+            states = _evolve_step_schroedinger_discrete(dt,
                                                         pstate.SYSTEM_HAMILTONIAN,
                                                         pstate.CONTROL_0, pstate.CONTROL_0_DAGGER,
                                                         pstate.CONTROL_1, pstate.CONTROL_1_DAGGER,
@@ -446,7 +446,7 @@ def _evaluate_schroedinger_discrete(controls, pstate, reporter):
 
 
 def _evolve_step_schroedinger_discrete(dt,
-                                       UNITARY_SIZE,SYSTEM_HAMILTONIAN,
+                                       SYSTEM_HAMILTONIAN,
                                        CONTROL_0, CONTROL_0_DAGGER,
                                        CONTROL_1, CONTROL_1_DAGGER,
                                        states, time,
