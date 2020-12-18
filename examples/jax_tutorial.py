@@ -172,6 +172,8 @@ ITERATION_COUNT = 20
 # You can seed optimizations with a set of controls using the
 # `initial_controls` argument.
 
+#Decide whether to use multilevel loopnest instead of single loop
+USE_MULTILEVEL=True
 # Before we move on, it is a good idea to check that everything looks how you would expect it to.
 print("HILBERT_SIZE:\n{}"
       "".format(HILBERT_SIZE))
@@ -218,7 +220,8 @@ result = grape_schroedinger_discrete(CONTROL_COUNT,
                                      optimizer=OPTIMIZER,
                                      save_file_path=SCHROED_FILE_PATH,
                                      save_intermediate_states=SAVE_INTERMEDIATE_STATES,
-                                     save_iteration_step=SAVE_ITERATION_STEP,)
+                                     save_iteration_step=SAVE_ITERATION_STEP,
+                                     use_multilevel=USE_MULTILEVEL)
 toc = time.perf_counter()
 print(f"Time to run code: {toc - tic:0.4f} seconds")
 # Next, we want to do some analysis of our results.

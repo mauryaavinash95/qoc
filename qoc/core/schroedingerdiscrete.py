@@ -5,6 +5,7 @@ optimization algorithm
 
 import jax
 import jax.numpy as jnp
+import math
 
 from qoc.core.common import (initialize_controls,
                              slap_controls, strip_controls,
@@ -123,7 +124,8 @@ def grape_schroedinger_discrete(control_count, control_eval_count,
                                 optimizer=Adam(),
                                 save_file_path=None,
                                 save_intermediate_states=False,
-                                save_iteration_step=0,):
+                                save_iteration_step=0,
+                                use_multilevel=False):
     """
     This method optimizes the evolution of a set of states under the schroedinger
     equation for time-discrete control parameters.
@@ -255,6 +257,8 @@ def grape_schroedinger_discrete(control_count, control_eval_count,
     initial_controls = strip_controls(pstate.complex_controls, pstate.initial_controls)
     # Choose the propagator
     propagator = _evaluate_schroedinger_discrete
+    if use_multilevel:
+        propagator = _evaluate_schroedinger_discrete_multilevel
     # Run the optimization.
     pstate.optimizer.run(_esd_wrap, pstate.iteration_count, initial_controls,
                          _esdj_wrap, args=(pstate, reporter, result, propagator))
@@ -486,4 +490,159 @@ def _evolve_step_schroedinger_discrete(dt,
     step_unitary = jax.scipy.linalg.expm(magnus)
     states = jnp.matmul(step_unitary, states)
 
+    return states
+
+def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
+    """
+    Compute the value of the total cost function for one evolution.
+
+    Arguments:
+    controls :: ndarray (control_eval_count x control_count)
+        - the control parameters
+    pstate :: qoc.GrapeSchroedingerDiscreteState or qoc.EvolveSchroedingerDiscreteState
+        - static objects
+    reporter :: any - a reporter for mutable objects
+
+    Returns:
+    error :: float - total error of the evolution
+    """
+    # Initialize local variables (heap -> stack).
+    control_eval_times = pstate.control_eval_times
+    cost_eval_step = pstate.cost_eval_step
+    costs = pstate.costs
+    dt = pstate.dt
+    evolution_time = pstate.evolution_time
+    final_system_eval_step = pstate.final_system_eval_step
+    hamiltonian = pstate.hamiltonian
+    interpolation_policy = pstate.interpolation_policy
+    magnus_policy = pstate.magnus_policy
+    program_type = pstate.program_type
+    if program_type == ProgramType.GRAPE:
+        iteration = reporter.iteration
+    else:
+        iteration = 0
+    save_intermediate_states = pstate.save_intermediate_states_
+    states = pstate.initial_states
+    step_costs = pstate.step_costs
+    system_eval_count = pstate.system_eval_count
+    error = 0
+
+
+    """
+    BEGIN ITERATION 0
+    """
+    system_eval_step = 0
+    cost_step, cost_step_remainder = jnp.divmod(system_eval_step, cost_eval_step)
+    is_cost_step = cost_step_remainder == 0
+    time = system_eval_step * dt
+    states = _evolve_step_schroedinger_discrete(dt, pstate.SYSTEM_HAMILTONIAN,
+        pstate.CONTROL_0,
+        pstate.CONTROL_0_DAGGER,
+        pstate.CONTROL_1,
+        pstate.CONTROL_1_DAGGER,
+        states, time,
+        control_eval_times=control_eval_times,
+        controls=controls,)
+    """
+    END ITERATION 0
+    """
+    """
+    BEGIN main iteration block
+    """
+    states = _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
+                                         dt, pstate.UNITARY_SIZE,
+                                         pstate.SYSTEM_HAMILTONIAN,
+                                         pstate.CONTROL_0, pstate.CONTROL_0_DAGGER,
+                                         pstate.CONTROL_1, pstate.CONTROL_1_DAGGER,
+                                         states,control_eval_times,controls)
+    """
+    BEGIN main iteration block
+    """
+    """
+    BEGIN ITERATION system_eval_count-1
+    """
+    cost_step, cost_step_remainder = jnp.divmod(system_eval_count-1, cost_eval_step)
+    is_cost_step = cost_step_remainder == 0
+    time = (system_eval_count-1) * dt
+    # Compute step costs every `cost_step`.
+    if is_cost_step:
+        for i, step_cost in enumerate(step_costs):
+            cost_error = step_cost.cost(controls, states, system_eval_step)
+            error = error + cost_error
+        #ENDFOR
+    """
+    END ITERATION system_eval_count-1
+    """
+    # Compute non-step-costs.
+    for i, cost in enumerate(costs):
+        if not cost.requires_step_evaluation:
+            cost_error = cost.cost(controls, states, final_system_eval_step)
+            error = error + cost_error
+
+    # Report reults.
+    reporter.error = error
+    reporter.final_states = states
+    
+    return error
+
+def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
+                                         dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
+                                         CONTROL_0, CONTROL_0_DAGGER,
+                                         CONTROL_1, CONTROL_1_DAGGER,
+                                         states,control_eval_times,controls):
+    # Evolve the states to `evolution_time`.
+    # Compute step-costs along the way.
+    MAXLEN=10
+    valslen=math.ceil(len(range(1,system_eval_count-1))/MAXLEN)
+    states = _evaluate_schroedinger_discrete_loop_inner(
+                                    1,MAXLEN,cost_eval_step,
+                                    dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
+                                    CONTROL_0, CONTROL_0_DAGGER,
+                                    CONTROL_1, CONTROL_1_DAGGER,
+                                    states,control_eval_times,controls)
+    
+    for i in range(1,valslen-1):
+        states = _evaluate_schroedinger_discrete_loop_inner(
+                                    MAXLEN*i,MAXLEN*(i+1),cost_eval_step,
+                                    dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
+                                    CONTROL_0, CONTROL_0_DAGGER,
+                                    CONTROL_1, CONTROL_1_DAGGER,
+                                    states,control_eval_times,controls)
+             
+                                                            
+    #ENDFOR
+    
+    i=valslen-1
+    states = _evaluate_schroedinger_discrete_loop_inner(
+                                    MAXLEN*i,system_eval_count-1,cost_eval_step,
+                                    dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
+                                    CONTROL_0, CONTROL_0_DAGGER,
+                                    CONTROL_1, CONTROL_1_DAGGER,
+                                    states,control_eval_times,controls)
+    
+    return states
+
+def _evaluate_schroedinger_discrete_loop_inner(start, stop,cost_eval_step,
+                                         dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
+                                         CONTROL_0, CONTROL_0_DAGGER,
+                                         CONTROL_1, CONTROL_1_DAGGER,
+                                         states,control_eval_times,controls):
+    # Evolve the states to `evolution_time`.
+    # Compute step-costs along the way.
+    for system_eval_step in range(start,stop):
+        #print("range fwd",start,stop-1,system_eval_step)
+        # Determine where we are in the mesh.
+        cost_step, cost_step_remainder = jnp.divmod(system_eval_step, cost_eval_step)
+        is_cost_step = cost_step_remainder == 0
+        time = system_eval_step * dt
+        
+        # Evolve the states to the next time step.
+        states = _evolve_step_schroedinger_discrete(dt, SYSTEM_HAMILTONIAN,
+                                                            CONTROL_0,
+                                                            CONTROL_0_DAGGER,
+                                                            CONTROL_1,
+                                                            CONTROL_1_DAGGER,
+                                                            states, time,
+                                                        control_eval_times=control_eval_times,
+                                                            controls=controls,)
     return states
