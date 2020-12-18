@@ -105,6 +105,10 @@ def evolve_schroedinger_discrete(evolution_time, hamiltonian,
 
 def grape_schroedinger_discrete(control_count, control_eval_count,
                                 costs, evolution_time, hamiltonian,
+                                UNITARY_SIZE,
+                                SYSTEM_HAMILTONIAN,
+                                CONTROL_0, CONTROL_0_DAGGER,
+                                CONTROL_1, CONTROL_1_DAGGER,
                                 initial_states, system_eval_count,
                                 complex_controls=False,
                                 cost_eval_step=1,
@@ -223,6 +227,10 @@ def grape_schroedinger_discrete(control_count, control_eval_count,
                                             costs, evolution_time, hamiltonian,
                                             impose_control_conditions,
                                             initial_controls,
+                                            UNITARY_SIZE,
+                                            SYSTEM_HAMILTONIAN,
+                                            CONTROL_0, CONTROL_0_DAGGER,
+                                            CONTROL_1, CONTROL_1_DAGGER,
                                             initial_states, interpolation_policy,
                                             iteration_count,
                                             log_iteration_step,
@@ -411,7 +419,10 @@ def _evaluate_schroedinger_discrete(controls, pstate, reporter):
 
         # Evolve the states to the next time step.
         if not is_final_system_eval_step:
-            states = _evolve_step_schroedinger_discrete(dt, hamiltonian,
+            states = _evolve_step_schroedinger_discrete(dt, pstate.UNITARY_SIZE,
+                                                        pstate.SYSTEM_HAMILTONIAN,
+                                                        pstate.CONTROL_0, pstate.CONTROL_0_DAGGER,
+                                                        pstate.CONTROL_1, pstate.CONTROL_1_DAGGER,
                                                         states, time,
                                                         control_eval_times=control_eval_times,
                                                         controls=controls,
@@ -432,7 +443,10 @@ def _evaluate_schroedinger_discrete(controls, pstate, reporter):
     return error
 
 
-def _evolve_step_schroedinger_discrete(dt, hamiltonian,
+def _evolve_step_schroedinger_discrete(dt,
+                                       UNITARY_SIZE,SYSTEM_HAMILTONIAN,
+                                       CONTROL_0, CONTROL_0_DAGGER,
+                                       CONTROL_1, CONTROL_1_DAGGER,
                                        states, time,
                                        control_eval_times=None,
                                        controls=None,
@@ -458,38 +472,25 @@ def _evolve_step_schroedinger_discrete(dt, hamiltonian,
     Returns:
     states
     """
-    # Choose an interpolator.
-    if interpolation_policy == InterpolationPolicy.LINEAR:
-        interpolate = interpolate_linear_set
-    else:
-        raise NotImplementedError("The interpolation policy {} "
-                                  "is not yet supported for this method."
-                                  "".format(interpolation_policy))
-
-    # Choose a control interpolator.
-    if controls is not None and control_eval_times is not None:
-        interpolate_controls = interpolate
-    else:
-        interpolate_controls = lambda x, xs, ys: None
-
     # Construct a function to interpolate the hamiltonian
     # for all time.
-    def get_hamiltonian(time_):
-        controls_ = interpolate_controls(time_, control_eval_times, controls)
-        hamiltonian_ = hamiltonian(controls_, time_)
-        return -1j * hamiltonian_
-    
-    if magnus_policy == MagnusPolicy.M2:
-        magnus = magnus_m2(get_hamiltonian, dt, time)
-    elif magnus_policy == MagnusPolicy.M4:
-        magnus = magnus_m4(get_hamiltonian, dt, time)
-    elif magnus_policy == MagnusPolicy.M6:
-        magnus = magnus_m6(get_hamiltonian, dt, time)
-    else:
-        raise ValueError("Unrecognized magnus policy {}."
-                         "".format(magnus_policy))
-    #ENDIF
+    _M2_C1 = 0.5
+    t1 = time + dt * _M2_C1
+    x = t1
+    xs = control_eval_times
+    ys = controls
+    index = jnp.argmax(x <= xs)
+     
+    y = ys[index - 1] + (((ys[index] - ys[index - 1]) / (xs[index] - xs[index - 1])) * (x - xs[index - 1]))
+    controls_ = y
 
+    hamiltonian_ = (SYSTEM_HAMILTONIAN
+             + controls_[0] * CONTROL_0
+             + jnp.conjugate(controls_[0]) * CONTROL_0_DAGGER
+             + controls_[1] * CONTROL_1
+             + jnp.conjugate(controls_[1]) * CONTROL_1_DAGGER)
+    a1 = -1j * hamiltonian_
+    magnus = dt * a1
     step_unitary = expm(magnus)
     states = matmuls(step_unitary, states)
 
