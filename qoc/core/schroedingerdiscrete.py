@@ -324,10 +324,7 @@ def _esdj_wrap(controls, pstate, reporter, result):
         grads = jnp.conjugate(grads)
 
     # The states need to be unwrapped from their autograd box.
-    if isinstance(reporter.final_states, Box):
-        final_states = reporter.final_states._value
-    else:
-        final_states = reporter.final_states
+    final_states = reporter.final_states
 
     # Update best configuration.
     if error < result.best_error:
@@ -393,10 +390,7 @@ def _evaluate_schroedinger_discrete(controls, pstate, reporter):
     for system_eval_step in range(system_eval_count):
         # If applicable, save the current states.
         if save_intermediate_states:
-            if isinstance(states, Box):
-                intermediate_states = states._value
-            else:
-                intermediate_states = states
+            intermediate_states = states
             pstate.save_intermediate_states(iteration,
                                             intermediate_states,
                                             system_eval_step,)
