@@ -253,9 +253,11 @@ def grape_schroedinger_discrete(control_count, control_eval_count,
     result = GrapeSchroedingerResult()
     # Convert the controls from cost function format to optimizer format.
     initial_controls = strip_controls(pstate.complex_controls, pstate.initial_controls)
+    # Choose the propagator
+    propagator = _evaluate_schroedinger_discrete
     # Run the optimization.
     pstate.optimizer.run(_esd_wrap, pstate.iteration_count, initial_controls,
-                         _esdj_wrap, args=(pstate, reporter, result, _evaluate_schroedinger_discrete))
+                         _esdj_wrap, args=(pstate, reporter, result, propagator))
 
     return result
 
