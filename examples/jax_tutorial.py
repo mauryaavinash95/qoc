@@ -235,9 +235,11 @@ plot_controls(SCHROED_FILE_PATH,
 # This function will plot the values of the diagonal elements of the
 # density matrix that is formed by taking the outer product of the state
 # with itself.
+"""
 plot_state_population(SCHROED_FILE_PATH,
                       save_file_path=POPULATION_PLOT_FILE_PATH,
                       show=SHOW,)
+"""
 # Both of the above functions plot the iteration that achieved the lowest error
 # by default. However, you check out their documentation in the source or
 # on qoc's documentation [0] to plot arbitrary iterations.

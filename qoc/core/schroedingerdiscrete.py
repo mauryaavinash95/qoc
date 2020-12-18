@@ -397,11 +397,13 @@ def _evaluate_schroedinger_discrete(controls, pstate, reporter):
     # Compute step-costs along the way.
     for system_eval_step in range(system_eval_count):
         # If applicable, save the current states.
+        """
         if save_intermediate_states:
             intermediate_states = states
             pstate.save_intermediate_states(iteration,
                                             intermediate_states,
                                             system_eval_step,)
+        """
         
         # Determine where we are in the mesh.
         cost_step, cost_step_remainder = divmod(system_eval_step, cost_eval_step)
