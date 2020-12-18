@@ -472,18 +472,10 @@ def _evolve_step_schroedinger_discrete(dt,
     Returns:
     states
     """
-    # Construct a function to interpolate the hamiltonian
-    # for all time.
-    _M2_C1 = 0.5
-    t1 = time + dt * _M2_C1
-    x = t1
-    xs = control_eval_times
-    ys = controls
-    index = jnp.argmax(x <= xs)
+    t1 = time + dt * 0.5
+    index = jnp.argmax(t1 <= control_eval_times)
      
-    y = ys[index - 1] + (((ys[index] - ys[index - 1]) / (xs[index] - xs[index - 1])) * (x - xs[index - 1]))
-    controls_ = y
-
+    controls_ = controls[index - 1] + (((controls[index] - controls[index - 1]) / (control_eval_times[index] - control_eval_times[index - 1])) * (t1 - control_eval_times[index - 1]))
     hamiltonian_ = (SYSTEM_HAMILTONIAN
              + controls_[0] * CONTROL_0
              + jnp.conjugate(controls_[0]) * CONTROL_0_DAGGER
