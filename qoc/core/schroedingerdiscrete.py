@@ -492,6 +492,6 @@ def _evolve_step_schroedinger_discrete(dt,
     a1 = -1j * hamiltonian_
     magnus = dt * a1
     step_unitary = jax.scipy.linalg.expm(magnus)
-    states = matmuls(step_unitary, states)
+    states = jnp.matmul(step_unitary, states)
 
     return states
