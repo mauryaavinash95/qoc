@@ -535,7 +535,7 @@ def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
     cost_step, cost_step_remainder = jnp.divmod(system_eval_step, cost_eval_step)
     is_cost_step = cost_step_remainder == 0
     time = system_eval_step * dt
-    states = _evolve_step_schroedinger_discrete(dt, pstate.SYSTEM_HAMILTONIAN,
+    states = _evolve_step_schroedinger_discrete_custom(dt, pstate.SYSTEM_HAMILTONIAN,
         pstate.CONTROL_0,
         pstate.CONTROL_0_DAGGER,
         pstate.CONTROL_1,
@@ -646,3 +646,78 @@ def _evaluate_schroedinger_discrete_loop_inner(start, stop,cost_eval_step,
                                                         control_eval_times=control_eval_times,
                                                             controls=controls,)
     return states
+
+@jax.custom_vjp
+def _evolve_step_schroedinger_discrete_custom(dt, SYSTEM_HAMILTONIAN,
+                                        CONTROL_0, CONTROL_0_DAGGER,
+                                        CONTROL_1, CONTROL_1_DAGGER,
+                                       states, time,
+                                       control_eval_times,
+                                       controls):
+    """
+    Utility to call _evolve_step_schroedinger_discrete()
+    It is decorated with jax.custom_vjp. This way
+    _evolve_step_schroedinger_discrete() does not have to
+    be decorated and can be used in a non custom manner
+    """
+    _evolve_step_schroedinger_discrete(dt, SYSTEM_HAMILTONIAN,
+                                              CONTROL_0, CONTROL_0_DAGGER,
+                                              CONTROL_1, CONTROL_1_DAGGER,
+                                              states, time,
+                                              control_eval_times,
+                                              controls)
+
+def _evolve_step_schroedinger_discrete_custom_fwd(dt, SYSTEM_HAMILTONIAN,
+                                            CONTROL_0, CONTROL_0_DAGGER,
+                                            CONTROL_1, CONTROL_1_DAGGER,
+                                            states, time,
+                                            control_eval_times,
+                                            controls):
+    states_start = states
+    states=_evolve_step_schroedinger_discrete(dt, SYSTEM_HAMILTONIAN,
+                                            CONTROL_0, CONTROL_0_DAGGER,
+                                            CONTROL_1, CONTROL_1_DAGGER,
+                                            states, time,
+                                            control_eval_times,
+                                            controls)
+    return states, (dt, SYSTEM_HAMILTONIAN,
+                        CONTROL_0, CONTROL_0_DAGGER,
+                        CONTROL_1, CONTROL_1_DAGGER,
+                        states_start, time,
+                        control_eval_times,
+                        controls)
+
+def _evolve_step_schroedinger_discrete_custom_bwd(res,g_prod):
+    dt, SYSTEM_HAMILTONIAN,CONTROL_0, CONTROL_0_DAGGER,CONTROL_1, CONTROL_1_DAGGER,states, time,control_eval_times,controls=res
+    #Reapply the control signals and recompute unitary matrix
+    t1 = time + dt * 0.5
+    index = jnp.argmax(t1 <= control_eval_times)
+    controls_ = controls[index - 1] + (((controls[index] - controls[index - 1]) / (control_eval_times[index] - control_eval_times[index - 1])) * (t1 - control_eval_times[index - 1]))
+    hamiltonian_ = (SYSTEM_HAMILTONIAN
+             + controls_[0] * CONTROL_0
+             + jnp.conjugate(controls_[0]) * CONTROL_0_DAGGER
+             + controls_[1] * CONTROL_1
+             + jnp.conjugate(controls_[1]) * CONTROL_1_DAGGER)
+    a1 = -1j * hamiltonian_
+    magnus = dt * a1
+    step_unitary, f_expm_grad = jax.vjp(jax.scipy.linalg.expm, (magnus), has_aux=False)
+    _, f_matmul = jax.vjp(jnp.matmul,step_unitary, states)
+
+    #Go backwards for the timestep
+    
+    step_unitaryb,statesb=f_matmul(g_prod)
+    magnusb = f_expm_grad(step_unitaryb)
+    a1b=dt*magnusb[0]
+    hamiltonian_b = jnp.conjugate(-1j)*a1b
+    controls1b=jnp.array((jnp.sum(jnp.conjugate(CONTROL_0)*hamiltonian_b) +
+       jnp.conjugate(jnp.sum(jnp.conjugate(CONTROL_0_DAGGER)*hamiltonian_b)),
+       jnp.sum(jnp.conjugate(CONTROL_1)*hamiltonian_b) +
+       jnp.conjugate(jnp.sum(jnp.conjugate(CONTROL_1_DAGGER)*hamiltonian_b))),
+       dtype=hamiltonian_b.dtype)
+    tempb = (t1-control_eval_times[index-1])*controls1b/(control_eval_times[index]-control_eval_times[index-1])
+    controlsb = jnp.zeros(controls.shape, controls1b.dtype)
+    controlsb=jax.ops.index_update(controlsb, jax.ops.index[index-1],controls1b - tempb)
+    controlsb=jax.ops.index_update(controlsb, jax.ops.index[index],tempb)
+    return (0.0,0.0,0.0,0.0,0.0,0.0,statesb,0.0,0.0,-1*controlsb)
+    
+_evolve_step_schroedinger_discrete_custom.defvjp(_evolve_step_schroedinger_discrete_custom_fwd, _evolve_step_schroedinger_discrete_custom_bwd)
