@@ -255,17 +255,17 @@ def grape_schroedinger_discrete(control_count, control_eval_count,
     initial_controls = strip_controls(pstate.complex_controls, pstate.initial_controls)
     # Run the optimization.
     pstate.optimizer.run(_esd_wrap, pstate.iteration_count, initial_controls,
-                         _esdj_wrap, args=(pstate, reporter, result))
+                         _esdj_wrap, args=(pstate, reporter, result, _evaluate_schroedinger_discrete))
 
     return result
 
 
 ### HELPER METHODS ###
 
-def _esd_wrap(controls, pstate, reporter, result):
+def _esd_wrap(controls, pstate, reporter, result, propagator):
     """
     Do intermediary work between the optimizer feeding controls
-    to _evaluate_schroedinger_discrete.
+    to propagator().
 
     Args:
     controls
@@ -287,7 +287,7 @@ def _esd_wrap(controls, pstate, reporter, result):
         controls = pstate.impose_control_conditions(controls)
 
     # Evaluate the cost function.
-    error = _evaluate_schroedinger_discrete(controls, pstate, reporter)
+    error = propagator(controls, pstate, reporter)
 
     # Determine if optimization should terminate.
     if error <= pstate.min_error:
@@ -298,10 +298,10 @@ def _esd_wrap(controls, pstate, reporter, result):
     return error, terminate
 
 
-def _esdj_wrap(controls, pstate, reporter, result):
+def _esdj_wrap(controls, pstate, reporter, result, propagator):
     """
     Do intermediary work between the optimizer feeding controls to 
-    the jacobian of _evaluate_schroedinger_discrete.
+    the jacobian of propagator().
 
     Args:
     controls
@@ -323,7 +323,7 @@ def _esdj_wrap(controls, pstate, reporter, result):
         controls = pstate.impose_control_conditions(controls)
 
     # Evaluate the jacobian.
-    error, grads = (ans_jacobian(_evaluate_schroedinger_discrete, 0)
+    error, grads = (ans_jacobian(propagator, 0)
                           (controls, pstate, reporter))
     # Autograd defines the derivative of a function of complex inputs as
     # df_dz = du_dx - i * du_dy for z = x + iy, f(z) = u(x, y) + iv(x, y).
