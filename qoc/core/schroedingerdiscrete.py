@@ -594,7 +594,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
     # Compute step-costs along the way.
     MAXLEN=10
     valslen=math.ceil(len(range(1,system_eval_count-1))/MAXLEN)
-    states = _evaluate_schroedinger_discrete_loop_inner_custom_store(
+    states = _evaluate_schroedinger_discrete_loop_inner_custom_inv(
                                     1,MAXLEN,cost_eval_step,
                                     dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
                                     CONTROL_0, CONTROL_0_DAGGER,
@@ -602,7 +602,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
                                     states,control_eval_times,controls)
     
     for i in range(1,valslen-1):
-        states = _evaluate_schroedinger_discrete_loop_inner_custom_store(
+        states = _evaluate_schroedinger_discrete_loop_inner_custom_inv(
                                     MAXLEN*i,MAXLEN*(i+1),cost_eval_step,
                                     dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
                                     CONTROL_0, CONTROL_0_DAGGER,
@@ -613,7 +613,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
     #ENDFOR
     
     i=valslen-1
-    states = _evaluate_schroedinger_discrete_loop_inner_custom_store(
+    states = _evaluate_schroedinger_discrete_loop_inner_custom_inv(
                                     MAXLEN*i,system_eval_count-1,cost_eval_step,
                                     dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
                                     CONTROL_0, CONTROL_0_DAGGER,
@@ -733,6 +733,86 @@ def _evaluate_schroedinger_discrete_loop_inner_custom_store_bwd(res,g_prod):
     return (0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,statesb,0.0,-1*controlsb)
 
 _evaluate_schroedinger_discrete_loop_inner_custom_store.defvjp(_evaluate_schroedinger_discrete_loop_inner_custom_fwd, _evaluate_schroedinger_discrete_loop_inner_custom_store_bwd)
+
+@jax.checkpoint(jax.custom_vjp)
+def _evaluate_schroedinger_discrete_loop_inner_custom_inv(start, stop,cost_eval_step,
+                                         dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
+                                         CONTROL_0, CONTROL_0_DAGGER,
+                                         CONTROL_1, CONTROL_1_DAGGER,
+                                         states,control_eval_times,controls):
+    states = _evaluate_schroedinger_discrete_loop_inner(start, stop,cost_eval_step,
+                                         dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
+                                         CONTROL_0, CONTROL_0_DAGGER,
+                                         CONTROL_1, CONTROL_1_DAGGER,
+                                         states,control_eval_times,controls)
+    return states
+
+
+def _evaluate_schroedinger_discrete_loop_inner_custom_inv_bwd(res,g_prod):
+    #'vals' are the control signals to the circuit
+    #'prog' is the output state
+    start, stop,cost_eval_step, dt,UNITARY_SIZE,SYSTEM_HAMILTONIAN,CONTROL_0, CONTROL_0_DAGGER,CONTROL_1, CONTROL_1_DAGGER,states,control_eval_times,controls=res
+    #Go forward in timesteps storing the controls only
+    _M2_C1 = 0.5
+    for i in range(start,stop):
+        time = i * dt
+        t1 = time + dt * _M2_C1
+        index = jnp.argmax(t1 <= control_eval_times)
+         
+        controls_ = controls[index - 1] + (((controls[index] - controls[index - 1]) / (control_eval_times[index] - control_eval_times[index - 1])) * (t1 - control_eval_times[index - 1]))
+        hamiltonian_ = (SYSTEM_HAMILTONIAN
+                 + controls_[0] * CONTROL_0
+                 + jnp.conjugate(controls_[0]) * CONTROL_0_DAGGER
+                 + controls_[1] * CONTROL_1
+                 + jnp.conjugate(controls_[1]) * CONTROL_1_DAGGER)
+        a1 = -1j * hamiltonian_
+        magnus = dt * a1
+        
+        step_unitary, f_expm_grad = jax.vjp(jax.scipy.linalg.expm, (magnus), has_aux=False)
+        states, f_matmul = jax.vjp(jnp.matmul,step_unitary, states)
+    
+    controlsb = jnp.zeros(controls.shape, states.dtype)
+    #Go backwards in timesteps
+    for i in range(stop-1,start-1,-1):
+        #Reapply controls to compute a step unitary matrix
+        time = i * dt
+        t1 = time + dt * _M2_C1
+        x = t1
+        xs = control_eval_times
+        ys = controls
+        index = jnp.argmax(x <= xs)
+        y = ys[index - 1] + (((ys[index] - ys[index - 1]) / (xs[index] - xs[index - 1])) * (x - xs[index - 1]))
+        controls_ = y
+
+        hamiltonian_ = (SYSTEM_HAMILTONIAN
+                 + controls_[0] * CONTROL_0
+                 + jnp.conjugate(controls_[0]) * CONTROL_0_DAGGER
+                 + controls_[1] * CONTROL_1
+                 + jnp.conjugate(controls_[1]) * CONTROL_1_DAGGER)
+        a1 = -1j * hamiltonian_
+        magnus = dt * a1
+        step_unitary, f_expm_grad = jax.vjp(jax.scipy.linalg.expm, (magnus), has_aux=False)
+        #Exploit invertibility of unitary matrix and calculate previous state
+        step_unitary_inv=jnp.conj(jnp.transpose(step_unitary))
+        states=(jnp.matmul(step_unitary_inv,states))
+        _, f_matmul = jax.vjp(jnp.matmul,step_unitary, states)
+        #Go backwards for the timestep
+        step_unitaryb,statesb=f_matmul(g_prod)
+        magnusb = f_expm_grad(step_unitaryb)
+        a1b=dt*magnusb[0]
+        hamiltonian_b = jnp.conjugate(-1j)*a1b
+        controls1b=jnp.array((jnp.sum(jnp.conjugate(CONTROL_0)*hamiltonian_b) +
+           jnp.conjugate(jnp.sum(jnp.conjugate(CONTROL_0_DAGGER)*hamiltonian_b)),
+           jnp.sum(jnp.conjugate(CONTROL_1)*hamiltonian_b) +
+           jnp.conjugate(jnp.sum(jnp.conjugate(CONTROL_1_DAGGER)*hamiltonian_b))),
+           dtype=hamiltonian_b.dtype)
+        tempb = (x-control_eval_times[index-1])*controls1b/(control_eval_times[index]-control_eval_times[index-1])
+        controlsb=jax.ops.index_update(controlsb, jax.ops.index[index-1],controlsb[index-1]+controls1b - tempb)
+        controlsb=jax.ops.index_update(controlsb, jax.ops.index[index],controlsb[index]+tempb)
+        g_prod=statesb
+    return (0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,statesb,0.0,-1*controlsb)
+
+_evaluate_schroedinger_discrete_loop_inner_custom_inv.defvjp(_evaluate_schroedinger_discrete_loop_inner_custom_fwd, _evaluate_schroedinger_discrete_loop_inner_custom_inv_bwd)
 
 @jax.custom_vjp
 def _evolve_step_schroedinger_discrete_custom(dt, SYSTEM_HAMILTONIAN,
