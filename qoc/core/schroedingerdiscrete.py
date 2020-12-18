@@ -21,7 +21,7 @@ from qoc.models import (Dummy, EvolveSchroedingerDiscreteState,
                         MagnusPolicy,
                         ProgramType,)
 from qoc.standard import (Adam, ans_jacobian,
-                          expm, matmuls)
+                          matmuls)
 
 ### MAIN METHODS ###
 
@@ -491,7 +491,7 @@ def _evolve_step_schroedinger_discrete(dt,
              + jnp.conjugate(controls_[1]) * CONTROL_1_DAGGER)
     a1 = -1j * hamiltonian_
     magnus = dt * a1
-    step_unitary = expm(magnus)
+    step_unitary = jax.scipy.linalg.expm(magnus)
     states = matmuls(step_unitary, states)
 
     return states
