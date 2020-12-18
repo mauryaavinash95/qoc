@@ -429,9 +429,7 @@ def _evaluate_schroedinger_discrete(controls, pstate, reporter):
                                                         pstate.CONTROL_1, pstate.CONTROL_1_DAGGER,
                                                         states, time,
                                                         control_eval_times=control_eval_times,
-                                                        controls=controls,
-                                                        interpolation_policy=interpolation_policy,
-                                                        magnus_policy=magnus_policy,)
+                                                        controls=controls,)
     #ENDFOR
 
     # Compute non-step-costs.
@@ -453,9 +451,7 @@ def _evolve_step_schroedinger_discrete(dt,
                                        CONTROL_1, CONTROL_1_DAGGER,
                                        states, time,
                                        control_eval_times=None,
-                                       controls=None,
-                                       interpolation_policy=InterpolationPolicy.LINEAR,
-                                       magnus_policy=MagnusPolicy.M2,):
+                                       controls=None,):
     """
     Use the exponential series method via magnus expansion to evolve the state vectors
     to the next time step under the schroedinger equation for time-discrete controls.
