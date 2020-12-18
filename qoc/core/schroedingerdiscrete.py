@@ -3,8 +3,8 @@ schroedingerdiscrete.py - a module to expose the grape schroedinger discrete
 optimization algorithm
 """
 
-from autograd.extend import Box
-import numpy as np
+import jax
+import jax.numpy as jnp
 
 from qoc.core.common import (initialize_controls,
                              slap_controls, strip_controls,
@@ -321,7 +321,7 @@ def _esdj_wrap(controls, pstate, reporter, result):
     # df_dz = du_dx - i * du_dy for z = x + iy, f(z) = u(x, y) + iv(x, y).
     # For optimization, we care about df_dz = du_dx + i * du_dy.
     if pstate.complex_controls:
-        grads = np.conjugate(grads)
+        grads = jnp.conjugate(grads)
 
     # The states need to be unwrapped from their autograd box.
     if isinstance(reporter.final_states, Box):
