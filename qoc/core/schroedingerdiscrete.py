@@ -125,7 +125,7 @@ def grape_schroedinger_discrete(control_count, control_eval_count,
                                 save_file_path=None,
                                 save_intermediate_states=False,
                                 save_iteration_step=0,
-                                use_multilevel=False):
+                                use_multilevel=True):
     """
     This method optimizes the evolution of a set of states under the schroedinger
     equation for time-discrete control parameters.
