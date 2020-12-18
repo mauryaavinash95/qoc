@@ -249,7 +249,7 @@ class GrapeSchroedingerDiscreteState(GrapeState):
                     with h5py.File(self.save_file_path, "a") as save_file:
                         save_file["controls"][save_step,] = controls
                         save_file["error"][save_step,] = error
-                        save_file["final_states"][save_step,] = final_states
+                        save_file["final_states"][save_step,] = final_states.val
                         save_file["grads"][save_step,] = grads
                     #ENDWITH
                 #ENDWITH
