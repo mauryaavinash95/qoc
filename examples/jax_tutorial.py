@@ -144,7 +144,6 @@ INITIAL_STATE_0 = krons(CAVITY_ZERO, TRANSMON_ZERO)
 # even if we only give qoc a single state. The `,` in jnp.stack((INITIAL_STATE_0`,`))
 # makes a difference.
 INITIAL_STATES = jnp.stack((INITIAL_STATE_0,))
-UNITARY_SIZE=HILBERT_SIZE
 assert(INITIAL_STATES.ndim == 3)
 TARGET_STATE_0 = krons(CAVITY_ONE, TRANSMON_ZERO)
 TARGET_STATES = jnp.stack((TARGET_STATE_0,))
