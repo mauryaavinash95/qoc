@@ -125,7 +125,9 @@ def grape_schroedinger_discrete(control_count, control_eval_count,
                                 save_file_path=None,
                                 save_intermediate_states=False,
                                 save_iteration_step=0,
-                                use_multilevel=True):
+                                use_multilevel=False,
+                                use_custom_inner=False,
+                                use_custom_step=False,):
     """
     This method optimizes the evolution of a set of states under the schroedinger
     equation for time-discrete control parameters.
@@ -223,6 +225,19 @@ def grape_schroedinger_discrete(control_count, control_eval_count,
                                                               evolution_time,
                                                               initial_controls,
                                                               max_control_norms)
+
+    step_propagator = _evolve_step_schroedinger_discrete
+    if use_custom_step:
+        step_propagator = _evolve_step_schroedinger_discrete_custom
+    
+    inner_propagator = _evaluate_schroedinger_discrete_loop_inner
+    if use_custom_inner==1:
+        inner_propagator = _evaluate_schroedinger_discrete_loop_inner_custom_store
+        step_propagator = _evolve_step_schroedinger_discrete_custom
+    if use_custom_inner==2:
+        inner_propagator = _evaluate_schroedinger_discrete_loop_inner_custom_inv
+        step_propagator = _evolve_step_schroedinger_discrete_custom
+        
     # Construct the program state.
     pstate = GrapeSchroedingerDiscreteState(complex_controls, control_count,
                                             control_eval_count, cost_eval_step,
@@ -241,7 +256,9 @@ def grape_schroedinger_discrete(control_count, control_eval_count,
                                             save_file_path,
                                             save_intermediate_states,
                                             save_iteration_step,
-                                            system_eval_count,)
+                                            system_eval_count,
+                                            inner_propagator,
+                                            step_propagator)
     pstate.log_and_save_initial()
 
     # Autograd does not allow multiple return values from
@@ -424,10 +441,10 @@ def _evaluate_schroedinger_discrete(controls, pstate, reporter):
                 cost_error = step_cost.cost(controls, states, system_eval_step)
                 error = error + cost_error
             #ENDFOR
-
+        
         # Evolve the states to the next time step.
         if not is_final_system_eval_step:
-            states = _evolve_step_schroedinger_discrete(dt,
+            states = pstate.step_propagator(dt,
                                                         pstate.SYSTEM_HAMILTONIAN,
                                                         pstate.CONTROL_0, pstate.CONTROL_0_DAGGER,
                                                         pstate.CONTROL_1, pstate.CONTROL_1_DAGGER,
@@ -535,7 +552,7 @@ def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
     cost_step, cost_step_remainder = jnp.divmod(system_eval_step, cost_eval_step)
     is_cost_step = cost_step_remainder == 0
     time = system_eval_step * dt
-    states = _evolve_step_schroedinger_discrete_custom(dt, pstate.SYSTEM_HAMILTONIAN,
+    states = pstate.step_propagator(dt, pstate.SYSTEM_HAMILTONIAN,
         pstate.CONTROL_0,
         pstate.CONTROL_0_DAGGER,
         pstate.CONTROL_1,
@@ -549,7 +566,8 @@ def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
     """
     BEGIN main iteration block
     """
-    states = _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
+    states = _evaluate_schroedinger_discrete_loop_outer(pstate.inner_propagator,
+                                         system_eval_count,cost_eval_step,
                                          dt, pstate.UNITARY_SIZE,
                                          pstate.SYSTEM_HAMILTONIAN,
                                          pstate.CONTROL_0, pstate.CONTROL_0_DAGGER,
@@ -585,7 +603,8 @@ def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
     
     return error
 
-def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
+def _evaluate_schroedinger_discrete_loop_outer(inner_propagator,
+                                         system_eval_count,cost_eval_step,
                                          dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
                                          CONTROL_0, CONTROL_0_DAGGER,
                                          CONTROL_1, CONTROL_1_DAGGER,
@@ -594,16 +613,14 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
     # Compute step-costs along the way.
     MAXLEN=10
     valslen=math.ceil(len(range(1,system_eval_count-1))/MAXLEN)
-    states = _evaluate_schroedinger_discrete_loop_inner_custom_inv(
-                                    1,MAXLEN,cost_eval_step,
+    states = inner_propagator(1,MAXLEN,cost_eval_step,
                                     dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
                                     CONTROL_0, CONTROL_0_DAGGER,
                                     CONTROL_1, CONTROL_1_DAGGER,
                                     states,control_eval_times,controls)
     
     for i in range(1,valslen-1):
-        states = _evaluate_schroedinger_discrete_loop_inner_custom_inv(
-                                    MAXLEN*i,MAXLEN*(i+1),cost_eval_step,
+        states = inner_propagator(MAXLEN*i,MAXLEN*(i+1),cost_eval_step,
                                     dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
                                     CONTROL_0, CONTROL_0_DAGGER,
                                     CONTROL_1, CONTROL_1_DAGGER,
@@ -613,8 +630,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
     #ENDFOR
     
     i=valslen-1
-    states = _evaluate_schroedinger_discrete_loop_inner_custom_inv(
-                                    MAXLEN*i,system_eval_count-1,cost_eval_step,
+    states = inner_propagator(MAXLEN*i,system_eval_count-1,cost_eval_step,
                                     dt, UNITARY_SIZE, SYSTEM_HAMILTONIAN,
                                     CONTROL_0, CONTROL_0_DAGGER,
                                     CONTROL_1, CONTROL_1_DAGGER,

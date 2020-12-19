@@ -175,6 +175,8 @@ class GrapeSchroedingerDiscreteState(GrapeState):
     step_cost_indices
     step_costs
     system_eval_count
+    inner_propagator
+    step_propagator
     """
     method = "grape_schroedinger_discrete"
 
@@ -192,7 +194,9 @@ class GrapeSchroedingerDiscreteState(GrapeState):
                  magnus_policy, min_error, optimizer,
                  save_file_path, save_intermediate_states_,
                  save_iteration_step,
-                 system_eval_count,):
+                 system_eval_count,
+                 inner_propagator,
+                 step_propagator):
         """
         See class fields for arguments not listed here.
         """
@@ -217,6 +221,8 @@ class GrapeSchroedingerDiscreteState(GrapeState):
         self.CONTROL_0_DAGGER = CONTROL_0_DAGGER
         self.CONTROL_1 = CONTROL_1
         self.CONTROL_1_DAGGER = CONTROL_1_DAGGER
+        self.inner_propagator = inner_propagator
+        self.step_propagator = step_propagator
 
 
     def log_and_save(self, controls, error, final_states, grads, iteration,):

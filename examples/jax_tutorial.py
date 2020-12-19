@@ -173,7 +173,20 @@ ITERATION_COUNT = 20
 # `initial_controls` argument.
 
 #Decide whether to use multilevel loopnest instead of single loop
-USE_MULTILEVEL=True
+USE_MULTILEVEL=False
+
+#Decide whether to use custom derivatives for single step
+#when USE_MULTILEVEL is False
+USE_CUSTOM_STEP=False
+
+# Decide whether to use custom derivatives for the inner loop
+# Ignored if USE_MULTILEVEL is False
+# No Custom Derivative                     => USE_CUSTOM_INNER = 0
+# Custom Derivatives through Storage       => USE_CUSTOM_INNER = 1
+# Custom Derivatives through Invertibility => USE_CUSTOM_INNER = 2
+# Setting USE_CUSTOM_INNER to 1 or 2 implies that USE_CUSTOM_STEP is True
+USE_CUSTOM_INNER = 0
+
 # Before we move on, it is a good idea to check that everything looks how you would expect it to.
 print("HILBERT_SIZE:\n{}"
       "".format(HILBERT_SIZE))
@@ -221,7 +234,9 @@ result = grape_schroedinger_discrete(CONTROL_COUNT,
                                      save_file_path=SCHROED_FILE_PATH,
                                      save_intermediate_states=SAVE_INTERMEDIATE_STATES,
                                      save_iteration_step=SAVE_ITERATION_STEP,
-                                     use_multilevel=USE_MULTILEVEL)
+                                     use_multilevel=USE_MULTILEVEL,
+                                     use_custom_inner=USE_CUSTOM_INNER,
+                                     use_custom_step=USE_CUSTOM_STEP)
 toc = time.perf_counter()
 print(f"Time to run code: {toc - tic:0.4f} seconds")
 # Next, we want to do some analysis of our results.
