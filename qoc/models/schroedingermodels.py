@@ -177,6 +177,7 @@ class GrapeSchroedingerDiscreteState(GrapeState):
     system_eval_count
     inner_propagator
     step_propagator
+    checkpoint_interval
     """
     method = "grape_schroedinger_discrete"
 
@@ -195,8 +196,9 @@ class GrapeSchroedingerDiscreteState(GrapeState):
                  save_file_path, save_intermediate_states_,
                  save_iteration_step,
                  system_eval_count,
-                 inner_propagator,
-                 step_propagator):
+                 use_custom_inner,
+                 use_custom_step,
+                 checkpoint_interval):
         """
         See class fields for arguments not listed here.
         """
@@ -221,8 +223,9 @@ class GrapeSchroedingerDiscreteState(GrapeState):
         self.CONTROL_0_DAGGER = CONTROL_0_DAGGER
         self.CONTROL_1 = CONTROL_1
         self.CONTROL_1_DAGGER = CONTROL_1_DAGGER
-        self.inner_propagator = inner_propagator
-        self.step_propagator = step_propagator
+        self.use_custom_inner = use_custom_inner
+        self.use_custom_step = use_custom_step
+        self.checkpoint_interval = checkpoint_interval
 
 
     def log_and_save(self, controls, error, final_states, grads, iteration,):
