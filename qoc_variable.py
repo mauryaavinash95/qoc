@@ -37,8 +37,6 @@ from qoc.standard import (Adam,
 import jax
 import matplotlib
 
-#print ('Number of arguments:', len(sys.argv), 'arguments.')
-#print ('Argument List:', str(sys.argv))
 
 # Define the size of the system.
 argv = sys.argv[1:]
@@ -229,7 +227,7 @@ for i in range(rep_count):
                                      use_custom_step=USE_CUSTOM_STEP,
                                      checkpoint_interval=CHECKPOINT_INTERVAL)
 toc = time.perf_counter()
-tot_time= (tic-toc)/rep_count
+tot_time= (toc-tic)/rep_count
 #print(f"Time to run code: {toc - tic:0.4f} seconds")
 print(f"Time to run code: {tot_time:0.4f} seconds")
 # Next, we want to do some analysis of our results.
@@ -238,8 +236,9 @@ CONTROLS_PLOT_FILE_PATH = os.path.join(SAVE_PATH, CONTROLS_PLOT_FILE)
 POPULATION_PLOT_FILE = "{}_population.png".format(EXPERIMENT_NAME)
 POPULATION_PLOT_FILE_PATH = os.path.join(SAVE_PATH, POPULATION_PLOT_FILE)
 SHOW = True
-result.block_until_ready()
 jax.profiler.save_device_memory_profile("memory_"+str(QUBIT_COUNT)+"_"+str(CONTROL_EVAL_COUNT)+"_"+str(CHECKPOINT_INTERVAL)+"_"+str(USE_CUSTOM_INNER)+".prof")
+with open('/proc/self/status', 'r') as f:
+    print(f.read())
 '''
 # This function will plot the controls, and their fourier transform.
 plot_controls(SCHROED_FILE_PATH,
