@@ -130,15 +130,23 @@ SYSTEM_EVAL_COUNT = CONTROL_EVAL_COUNT
 # even if we only give qoc a single state. The `,` in np.stack((INITIAL_STATE_0`,`))
 # makes a difference.
 
-INITIAL_STATES = matrix_to_column_vector_list(jax.numpy.identity(HILBERT_SIZE))
+intial0 = jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128)
+INITIAL_STATES = matrix_to_column_vector_list(jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128))
 assert(INITIAL_STATES.ndim == 3)
-TARGET_STATES=matrix_to_column_vector_list(qt.rand_unitary(HILBERT_SIZE))
+density0 = np.matmul(intial0, conjugate_transpose(intial0))
+INITIAL_DENSITIES = np.stack((density0,), axis=0)[0]
+ranunit0=onp.matrix(qt.rand_unitary(HILBERT_SIZE))
+targetstates0=matrix_to_column_vector_list(ranunit0)
+TARGET_STATES=matrix_to_column_vector_list(ranunit0)
+target_density0 = np.matmul(ranunit0, conjugate_transpose(ranunit0))
+TARGET_DENSITIES = np.stack((target_density0,), axis=0)
+
 
 # Costs are functions that we want qoc to minimize the output of.
 # In this example, we want to minimize the infidelity (maximize the fidelity) of
 # the initial state and the target state.
 # Note that `COSTS` is a list of cost function objects.
-COSTS = [TargetStateInfidelity(TARGET_STATES)]
+COSTS = [TargetStateInfidelity(TARGET_STATES), TargetDensityInfidelity(TARGET_DENSITIES)]
 
 # We want to tell qoc how often to store information about the optimization
 # and how often to log output. Both `log_iteration_step` and `save_iteration_step`
@@ -214,6 +222,7 @@ for i in range(rep_count):
                                      CONTROL_0,CONTROL_0_DAGGER,
                                      CONTROL_1,CONTROL_1_DAGGER,
                                      INITIAL_STATES,
+                                     INITIAL_DENSITIES,
                                      SYSTEM_EVAL_COUNT,
                                      complex_controls=COMPLEX_CONTROLS,
                                      iteration_count=ITERATION_COUNT,
