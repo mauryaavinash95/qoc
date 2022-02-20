@@ -541,7 +541,6 @@ def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
     if pstate.use_custom_step:
         step_propagator = _evolve_step_schroedinger_discrete_custom
     
-    #print("_evaluate_schroedinger_discrete_multilevel")
     """
     BEGIN ITERATION 0
     """
@@ -623,17 +622,13 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
                         UNITARY_SIZE,UNITARY_SIZE),dtype=states.dtype)
       index_store=jnp.zeros((checkpoint_interval),dtype=jnp.integer)
     
-    #print("_evaluate_schroedinger_discrete_loop_outer")
-    @jax.profiler.trace_function
     def _evaluate_schroedinger_discrete_loop_inner(start, stop,cost_eval_step,
                                              dt,
                                              states, densities, control_eval_times,controls):
         # Evolve the states to `evolution_time`.
         # Compute step-costs along the way.
-        #print("_evaluate_schroedinger_discrete_loop_inner",start, stop)
         for system_eval_step in range(start,stop):
             
-            #print("range fwd",start,stop-1,system_eval_step)
             # Determine where we are in the mesh.
             cost_step, cost_step_remainder = jnp.divmod(system_eval_step, cost_eval_step)
             is_cost_step = cost_step_remainder == 0
@@ -649,7 +644,6 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
                                                                 controls=controls,)
         return states, densities
 
-    #@jax.checkpoint(jax.custom_vjp)
     @jax.custom_vjp
     def _evaluate_schroedinger_discrete_loop_inner_custom_store(start, stop,cost_eval_step,
                                              dt,
@@ -730,7 +724,6 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
 
     _evaluate_schroedinger_discrete_loop_inner_custom_store.defvjp(_evaluate_schroedinger_discrete_loop_inner_custom_store_fwd, _evaluate_schroedinger_discrete_loop_inner_custom_store_bwd)
 
-    #@jax.checkpoint(jax.custom_vjp)
     @jax.custom_vjp
     def _evaluate_schroedinger_discrete_loop_inner_custom_inv(start, stop,cost_eval_step,
                                              dt,
@@ -752,30 +745,10 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
                                              dt,
                                              states,densities,
                                              control_eval_times,controls)
-    @jax.profiler.trace_function
     def _evaluate_schroedinger_discrete_loop_inner_custom_inv_bwd(res,g_prod):
         start, stop,cost_eval_step, dt, states,densities,control_eval_times,controls=res
         #Go forward in timesteps storing the controls only
         _M2_C1 = 0.5
-        #print("_evaluate_schroedinger_discrete_loop_inner_custom_inv_bwd")
-        """
-        for i in range(start,stop):
-            time = i * dt
-            t1 = time + dt * _M2_C1
-            index = jnp.argmax(t1 <= control_eval_times)
-             
-            controls_ = controls[index - 1] + (((controls[index] - controls[index - 1]) / (control_eval_times[index] - control_eval_times[index - 1])) * (t1 - control_eval_times[index - 1]))
-            hamiltonian_ = (SYSTEM_HAMILTONIAN
-                     + controls_[0] * CONTROL_0
-                     + jnp.conjugate(controls_[0]) * CONTROL_0_DAGGER
-                     + controls_[1] * CONTROL_1
-                     + jnp.conjugate(controls_[1]) * CONTROL_1_DAGGER)
-            a1 = -1j * hamiltonian_
-            magnus = dt * a1
-            
-            step_unitary, f_expm_grad = jax.vjp(jax.scipy.linalg.expm, (magnus), has_aux=False)
-            states, f_matmul = jax.vjp(jnp.matmul,step_unitary, states)
-        """
         controlsb = jnp.zeros(controls.shape, states.dtype)
         #Go backwards in timesteps
         for i in range(stop-1,start-1,-1):
@@ -888,7 +861,6 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
         return (0.0,statesb,densitiesb,0.0,0.0,-1*controlsb)
         
     _evolve_step_schroedinger_discrete_custom.defvjp(_evolve_step_schroedinger_discrete_custom_fwd, _evolve_step_schroedinger_discrete_custom_bwd)
-
     
     if pstate.use_custom_inner==3: #This is the use the default inner and ignore checkpooint distance
         inner_propagator = _evaluate_schroedinger_discrete_loop_inner
