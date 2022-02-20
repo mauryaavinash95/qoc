@@ -190,7 +190,7 @@ class GrapeSchroedingerDiscreteState(GrapeState):
                  SYSTEM_HAMILTONIAN,
                  CONTROL_0, CONTROL_0_DAGGER,
                  CONTROL_1, CONTROL_1_DAGGER,
-                 initial_states, interpolation_policy, iteration_count,
+                 initial_states, initial_densities, interpolation_policy, iteration_count,
                  log_iteration_step, max_control_norms,
                  magnus_policy, min_error, optimizer,
                  save_file_path, save_intermediate_states_,
@@ -226,6 +226,7 @@ class GrapeSchroedingerDiscreteState(GrapeState):
         self.use_custom_inner = use_custom_inner
         self.use_custom_step = use_custom_step
         self.checkpoint_interval = checkpoint_interval
+        self.initial_densities = initial_densities
 
 
     def log_and_save(self, controls, error, final_states, grads, iteration,):
