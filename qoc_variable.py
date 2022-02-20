@@ -1,6 +1,4 @@
 import os
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"  
-os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
 
 # Every computation that qoc performs has to be differentiable.
 # qoc uses autograd [2] to do automatic differentiation [3].
