@@ -19,7 +19,7 @@ from .costs import (ControlArea,
                     TargetStateInfidelityTime,)
 
 from .functions import (commutator, conjugate_transpose,
-                        expm, krons, matmuls,
+                        krons, matmuls,
                         rms_norm,
                         column_vector_list_to_matrix,
                         matrix_to_column_vector_list,)
