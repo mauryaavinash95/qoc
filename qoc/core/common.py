@@ -29,7 +29,9 @@ def clip_control_norms(controls, max_control_norms):
         resolved_control_points = ((offending_control_points / control_norm)
                                    * max_control_norm)
         resolved_control_points1 = jnp.where(resolved_control_points!=0.0, resolved_control_points, controls[:,i])
-        controls = jax.ops.index_update(controls, jax.ops.index[:,i], resolved_control_points1)
+        controls = controls.at[:,i].set(resolved_control_points1)
+        #controls = jax.ops.index_update(controls, jax.ops.index[:,i], resolved_control_points1)
+        # jax.ops.index_update was removed. Replace with x.at[idx].set(y)
     #ENDFOR
     return controls
 
@@ -135,7 +137,9 @@ def gen_controls_flat(complex_controls, control_count, control_eval_count,
         max_norm = max_control_norms[i]
         small_norm = max_norm * 1e-1
         control = jnp.repeat(small_norm, control_eval_count)
-        controls = jax.ops.index_update(controls, jax.ops.index[:,i], control)
+        controls = controls.at[:,i].set(control)
+        #controls = jax.ops.index_update(controls, jax.ops.index[:,i], control)
+        # jax.ops.index_update was removed. Replace with x.at[idx].set(y)
     #ENDFOR
 
     # Mimic the flat line for the imaginary parts, and normalize.
