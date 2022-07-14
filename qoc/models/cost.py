@@ -33,7 +33,7 @@ class Cost(object):
         return self.__str__()
 
         
-    def cost(params, states, step):
+    def cost(self, params, states, step):
         """
         an autograd compatible function (https://github.com/HIPS/autograd)
         to compute the cost at each pulse time step given the pulse time step,
