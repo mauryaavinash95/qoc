@@ -191,7 +191,7 @@ class GrapeSchroedingerDiscreteStateUnitary(GrapeState):
                  SYSTEM_HAMILTONIAN,
                  CONTROL_0, CONTROL_1,
                  CONTROL_2, CONTROL_3,
-                 initial_states, initial_densities, interpolation_policy, iteration_count,
+                 initial_states, initial_densities, initial_unitaries, interpolation_policy, iteration_count,
                  log_iteration_step, max_control_norms,
                  magnus_policy, min_error, optimizer,
                  save_file_path, save_intermediate_states_,
@@ -215,6 +215,9 @@ class GrapeSchroedingerDiscreteStateUnitary(GrapeState):
                          system_eval_count,)
         self.hilbert_size = initial_states[0].shape[0]
         self.initial_states = initial_states
+        self.initial_densities = initial_densities
+        self.initial_unitaries = initial_unitaries
+        # added initial_densities, initial_unitaries
         self.magnus_policy = magnus_policy
         self.save_intermediate_states_ = (self.should_save
                                           and save_intermediate_states_)
