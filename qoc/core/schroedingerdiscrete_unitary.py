@@ -23,6 +23,7 @@ from qoc.models import (Dummy, EvolveSchroedingerDiscreteStateUnitary,
                         ProgramType,)
 from qoc.standard import (Adam, ans_jacobian,
                           matmuls,TargetUnitaryInfidelity,TargetDensityInfidelity)
+from qoc.standard.functions import conjugate_transpose
 
 ### MAIN METHODS ###
 
@@ -264,8 +265,10 @@ def grape_schroedinger_discrete_unitary(control_count, control_eval_count,
     initial_controls = strip_controls(pstate.complex_controls, pstate.initial_controls)
     # Choose the propagator
     propagator = _evaluate_schroedinger_discrete_unitary
+    
     if use_multilevel:
-        propagator = _evaluate_schroedinger_discrete_multilevel
+        propagator = _evaluate_schroedinger_discrete_multilevel_unitary
+    
     # Run the optimization.
     pstate.optimizer.run(_esd_wrap, pstate.iteration_count, initial_controls,
                          _esdj_wrap, args=(pstate, reporter, result, propagator))
@@ -430,6 +433,7 @@ def _evaluate_schroedinger_discrete_unitary(controls, pstate, reporter):
         # Compute step costs every `cost_step`.
         if is_cost_step and not is_first_system_eval_step:
             for i, step_cost in enumerate(step_costs):
+                print('cost is state')
                 cost_error = step_cost.cost(controls, states, system_eval_step)
                 error = error + cost_error
             #ENDFOR
@@ -448,10 +452,20 @@ def _evaluate_schroedinger_discrete_unitary(controls, pstate, reporter):
     # Compute non-step-costs.
     for i, cost in enumerate(costs):
         if not cost.requires_step_evaluation:
-            cost_error = cost.cost(controls, states, final_system_eval_step)
+            print(cost.cost)
+            if cost.cost == TargetDensityInfidelity.cost:
+                print('cost is density')
+                cost_error = cost.cost(controls, densities, final_system_eval_step)
+            elif cost.cost == TargetUnitaryInfidelity.cost:
+                print('cost is unitary')
+                cost_error = cost.cost(controls, unitaries, final_system_eval_step)
+            else:
+                print('cost is state')
+                cost_error = cost.cost(controls, states, final_system_eval_step)
+            
             error = error + cost_error
 
-    # Report reults.
+    # Report results.
     reporter.error = error
     reporter.final_states = states
     
@@ -498,12 +512,12 @@ def _evolve_step_schroedinger_discrete_unitary(dt,
     magnus = dt * a1
     step_unitary = jax.scipy.linalg.expm(magnus)
     states = jnp.matmul(step_unitary, states)
-    densities = jnp.matmul(step_unitary, densities)
+    densities = jnp.matmul(jnp.matmul(step_unitary, densities), conjugate_transpose(step_unitary))
     unitaries = jnp.matmul(step_unitary, unitaries)
     
     return (states, densities, unitaries)
 
-def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
+def _evaluate_schroedinger_discrete_multilevel_unitary(controls, pstate, reporter):
     """
     Compute the value of the total cost function for one evolution.
 
@@ -535,6 +549,7 @@ def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
     save_intermediate_states = pstate.save_intermediate_states_
     states = pstate.initial_states
     densities = pstate.initial_densities
+    unitaries = pstate.initial_unitaries
     step_costs = pstate.step_costs
     system_eval_count = pstate.system_eval_count
     error = 0
@@ -542,7 +557,7 @@ def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
     
     step_propagator = _evolve_step_schroedinger_discrete_unitary
     if pstate.use_custom_step:
-        step_propagator = _evolve_step_schroedinger_discrete_custom
+        step_propagator = _evolve_step_schroedinger_discrete_custom_unitary
     
     """
     BEGIN ITERATION 0
@@ -551,11 +566,11 @@ def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
     cost_step, cost_step_remainder = jnp.divmod(system_eval_step, cost_eval_step)
     is_cost_step = cost_step_remainder == 0
     time = system_eval_step * dt
-    states, densities = step_propagator(dt,
+    states, densities, unitaries = step_propagator(dt,
            pstate.SYSTEM_HAMILTONIAN,
            pstate.CONTROL_0, pstate.CONTROL_1,
            pstate.CONTROL_2, pstate.CONTROL_3,
-        states, densities, time,
+        states, densities, unitaries, time,
         control_eval_times=control_eval_times,
         controls=controls,)
     """
@@ -564,10 +579,10 @@ def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
     """
     BEGIN main iteration block
     """
-    states, densities = _evaluate_schroedinger_discrete_loop_outer(
+    states, densities, unitaries = _evaluate_schroedinger_discrete_loop_outer_unitary(
                                          system_eval_count,cost_eval_step,
                                          dt, pstate,
-                                         states, densities, control_eval_times,controls,
+                                         states, densities, unitaries, control_eval_times,controls,
                                          pstate.checkpoint_interval)
     """
     END main iteration block
@@ -591,9 +606,11 @@ def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
     for i, cost in enumerate(costs):
         if not cost.requires_step_evaluation:
             if cost.cost == TargetDensityInfidelity.cost:
-              cost_error = cost.cost(controls, densities, final_system_eval_step)
+                cost_error = cost.cost(controls, densities, final_system_eval_step)
+            elif cost.cost == TargetUnitaryInfidelity.cost:
+                cost_error = cost.cost(controls, unitaries, final_system_eval_step)
             else:
-              cost_error = cost.cost(controls, states, final_system_eval_step)
+                cost_error = cost.cost(controls, states, final_system_eval_step)
             error = error + cost_error
 
     # Report reults.
@@ -602,9 +619,9 @@ def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
     
     return error
 
-def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
+def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_eval_step,
                                          dt, pstate,
-                                         states, densities, control_eval_times,controls, checkpoint_interval):
+                                         states, densities, unitaries, control_eval_times,controls, checkpoint_interval):
                                          
     UNITARY_SIZE = pstate.UNITARY_SIZE
     SYSTEM_HAMILTONIAN = pstate.SYSTEM_HAMILTONIAN
@@ -617,17 +634,17 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
     index_store=None
     state_store = None
     if pstate.use_custom_inner==1:
-      state_store=jnp.zeros((checkpoint_interval,UNITARY_SIZE,UNITARY_SIZE,
+        state_store=jnp.zeros((checkpoint_interval,UNITARY_SIZE,UNITARY_SIZE,
                                1),dtype=states.dtype)
-      densities_store=jnp.zeros((checkpoint_interval,UNITARY_SIZE,UNITARY_SIZE
+        densities_store=jnp.zeros((checkpoint_interval,UNITARY_SIZE,UNITARY_SIZE
                                ),dtype=states.dtype)
-      magnus_store=jnp.zeros((checkpoint_interval,
+        magnus_store=jnp.zeros((checkpoint_interval,
                         UNITARY_SIZE,UNITARY_SIZE),dtype=states.dtype)
-      index_store=jnp.zeros((checkpoint_interval),dtype=jnp.integer)
+        index_store=jnp.zeros((checkpoint_interval),dtype=jnp.integer)
     
-    def _evaluate_schroedinger_discrete_loop_inner(start, stop,cost_eval_step,
+    def _evaluate_schroedinger_discrete_loop_inner_unitary(start, stop,cost_eval_step,
                                              dt,
-                                             states, densities, control_eval_times,controls):
+                                             states, densities, unitaries, control_eval_times,controls):
         # Evolve the states to `evolution_time`.
         # Compute step-costs along the way.
         for system_eval_step in range(start,stop):
@@ -638,42 +655,42 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
             time = system_eval_step * dt
             
             # Evolve the states to the next time step.
-            states, densities  = _evolve_step_schroedinger_discrete_unitary(dt,
-            SYSTEM_HAMILTONIAN,
-            CONTROL_0, CONTROL_1,
-            CONTROL_2, CONTROL_3,
-                                                                states, densities, time,
-                                                            control_eval_times=control_eval_times,
-                                                                controls=controls,)
-        return states, densities
+            states, densities, unitaries  = _evolve_step_schroedinger_discrete_unitary(dt,
+                                                                  SYSTEM_HAMILTONIAN,
+                                                                  CONTROL_0, CONTROL_1,
+                                                                  CONTROL_2, CONTROL_3,
+                                                                  states, densities, unitaries, time,
+                                                                  control_eval_times=control_eval_times,
+                                                                  controls=controls,)
+        return states, densities, unitaries
 
     @jax.custom_vjp
-    def _evaluate_schroedinger_discrete_loop_inner_custom_store(start, stop,cost_eval_step,
+    def _evaluate_schroedinger_discrete_loop_inner_custom_store_unitary(start, stop,cost_eval_step,
                                              dt,
-                                             states,densities,control_eval_times,controls):
-        states, densities = _evaluate_schroedinger_discrete_loop_inner(start, stop,cost_eval_step,
+                                             states,densities, unitaries,control_eval_times,controls):
+        states, densities, unitaries = _evaluate_schroedinger_discrete_loop_inner_unitary(start, stop,cost_eval_step,
                                              dt,
-                                             states, densities, control_eval_times,controls)
-        return states, densities
+                                             states, densities, unitaries, control_eval_times,controls)
+        return states, densities, unitaries
                                              
 
     @jax.profiler.trace_function
-    def _evaluate_schroedinger_discrete_loop_inner_custom_store_fwd(start, stop,cost_eval_step,
+    def _evaluate_schroedinger_discrete_loop_inner_custom_store_fwd_unitary(start, stop,cost_eval_step,
                                              dt,
-                                             states,densities,control_eval_times,controls):
+                                             states,densities, unitaries,control_eval_times,controls):
         start_states=states
         start_densities=densities
         
-        states, densities=_evaluate_schroedinger_discrete_loop_inner(start, stop,cost_eval_step,
+        states, densities, unitaries=_evaluate_schroedinger_discrete_loop_inner_unitary(start, stop,cost_eval_step,
                                              dt,
-                                             states,densities,control_eval_times,controls)
+                                             states,densities, unitaries,control_eval_times,controls)
         #Here we store the stating state for use in the backward pass
         return (states,densities), (start, stop,cost_eval_step,
                                              dt,
                                              start_states, start_densities,
                                              control_eval_times,controls)
     @jax.profiler.trace_function
-    def _evaluate_schroedinger_discrete_loop_inner_custom_store_bwd(res,g_prod):
+    def _evaluate_schroedinger_discrete_loop_inner_custom_store_bwd_unitary(res,g_prod):
         nonlocal index_store
         nonlocal magnus_store
         nonlocal state_store
@@ -685,7 +702,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
             time = i * dt
             t1 = time + dt * 0.5
             index = jnp.argmax(t1 <= control_eval_times)
-            index_store=jax.ops.index_update(index_store, jax.ops.index[i-start],index)
+            index_store = index_store.at[i-start].set(index)
             controls_ = controls[index - 1] + (((controls[index] - controls[index - 1]) / (control_eval_times[index] - control_eval_times[index - 1])) * (t1 - control_eval_times[index - 1]))
             hamiltonian_ = (SYSTEM_HAMILTONIAN
                      + controls_[0] * CONTROL_0
@@ -694,12 +711,13 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
                      + controls_[3] * CONTROL_3)
             a1 = -1j * hamiltonian_
             magnus = dt * a1
-            magnus_store=jax.ops.index_update(magnus_store, jax.ops.index[i-start],magnus)
+            magnus_store = magnus_store.at[i-start].set(magnus)
             step_unitary, f_expm_grad = jax.vjp(jax.scipy.linalg.expm, (magnus), has_aux=False)
-            state_store=jax.ops.index_update(state_store, jax.ops.index[i-start],states)
-            densities_store=jax.ops.index_update(densities_store, jax.ops.index[i-start],densities)
+            state_store = state_store.at[i-start].set(states)
+            densities_store = densities_store.at[i-start].set(densities)
             states, f_matmul = jax.vjp(jnp.matmul,step_unitary, states)
             densities, f_matmul_densities = jax.vjp(jnp.matmul,step_unitary, densities)
+        
         controlsb = jnp.zeros(controls.shape, states.dtype)
         #Begin U-Turn Go backwards in timesteps
         for i in range(stop-1,start-1,-1):
@@ -720,35 +738,35 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
                jnp.conjugate(jnp.sum(jnp.conjugate(CONTROL_1_DAGGER)*hamiltonian_b))),
                dtype=hamiltonian_b.dtype)
             tempb = (t1-control_eval_times[index-1])*controls1b/(control_eval_times[index]-control_eval_times[index-1])
-            controlsb=jax.ops.index_update(controlsb, jax.ops.index[index-1],controlsb[index-1]+controls1b - tempb)
-            controlsb=jax.ops.index_update(controlsb, jax.ops.index[index],controlsb[index]+tempb)
+            controlsb = controlsb.at[index-1].set(controlsb[index-1]+controls1b - tempb)
+            controlsb = controlsb.at[index].set(controlsb[index]+tempb)
             g_prod=(statesb,densitiesb)
         return (0.0,0.0,0.0,0.0,statesb,densitiesb,0.0,-1*controlsb)
 
-    _evaluate_schroedinger_discrete_loop_inner_custom_store.defvjp(_evaluate_schroedinger_discrete_loop_inner_custom_store_fwd, _evaluate_schroedinger_discrete_loop_inner_custom_store_bwd)
+    _evaluate_schroedinger_discrete_loop_inner_custom_store_unitary.defvjp(_evaluate_schroedinger_discrete_loop_inner_custom_store_fwd_unitary, _evaluate_schroedinger_discrete_loop_inner_custom_store_bwd_unitary)
 
     @jax.custom_vjp
-    def _evaluate_schroedinger_discrete_loop_inner_custom_inv(start, stop,cost_eval_step,
+    def _evaluate_schroedinger_discrete_loop_inner_custom_inv_unitary(start, stop,cost_eval_step,
                                              dt,
-                                             states,densities,control_eval_times,controls):
-        states, densities = _evaluate_schroedinger_discrete_loop_inner(start, stop,cost_eval_step,
+                                             states,densities,unitaries,control_eval_times,controls):
+        states, densities,unitaries = _evaluate_schroedinger_discrete_loop_inner_unitary(start, stop,cost_eval_step,
                                              dt,
-                                             states,densities,control_eval_times,controls)
-        return states,densities
+                                             states,densities,unitaries,control_eval_times,controls)
+        return states,densities,unitaries
 
     @jax.profiler.trace_function
-    def _evaluate_schroedinger_discrete_loop_inner_custom_inv_fwd(start, stop,cost_eval_step,
+    def _evaluate_schroedinger_discrete_loop_inner_custom_inv_fwd_unitary(start, stop,cost_eval_step,
                                              dt,
-                                             states,densities,control_eval_times,controls):
-        states,densities=_evaluate_schroedinger_discrete_loop_inner(start, stop,cost_eval_step,
+                                             states,densities,unitaries,control_eval_times,controls):
+        states,densities,unitaries=_evaluate_schroedinger_discrete_loop_inner_unitary(start, stop,cost_eval_step,
                                              dt,
-                                             states,densities,control_eval_times,controls)
+                                             states,densities,unitaries,control_eval_times,controls)
         #Here we store the final state for use in the backward pass
         return (states,densities), (start, stop,cost_eval_step,
                                              dt,
                                              states,densities,
                                              control_eval_times,controls)
-    def _evaluate_schroedinger_discrete_loop_inner_custom_inv_bwd(res,g_prod):
+    def _evaluate_schroedinger_discrete_loop_inner_custom_inv_bwd_unitary(res,g_prod):
         start, stop,cost_eval_step, dt, states,densities,control_eval_times,controls=res
         #Go forward in timesteps storing the controls only
         _M2_C1 = 0.5
@@ -791,15 +809,15 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
                jnp.conjugate(jnp.sum(jnp.conjugate(CONTROL_1_DAGGER)*hamiltonian_b))),
                dtype=hamiltonian_b.dtype)
             tempb = (x-control_eval_times[index-1])*controls1b/(control_eval_times[index]-control_eval_times[index-1])
-            controlsb=jax.ops.index_update(controlsb, jax.ops.index[index-1],controlsb[index-1]+controls1b - tempb)
-            controlsb=jax.ops.index_update(controlsb, jax.ops.index[index],controlsb[index]+tempb)
+            controlsb = controlsb.at[index-1].set(controlsb[index-1]+controls1b - tempb)
+            controlsb = controlsb.at[index].set(controlsb[index]+tempb)
             g_prod=statesb,densitiesb
         return (0.0,0.0,0.0,0.0,statesb,densitiesb,0.0,-1*controlsb)
 
-    _evaluate_schroedinger_discrete_loop_inner_custom_inv.defvjp(_evaluate_schroedinger_discrete_loop_inner_custom_inv_fwd, _evaluate_schroedinger_discrete_loop_inner_custom_inv_bwd)
+    _evaluate_schroedinger_discrete_loop_inner_custom_inv_unitary.defvjp(_evaluate_schroedinger_discrete_loop_inner_custom_inv_fwd_unitary, _evaluate_schroedinger_discrete_loop_inner_custom_inv_bwd_unitary)
 
     @jax.custom_vjp
-    def _evolve_step_schroedinger_discrete_custom(dt,
+    def _evolve_step_schroedinger_discrete_custom_unitary(dt,
                                            states, densities, time,
                                            control_eval_times,
                                            controls):
@@ -814,7 +832,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
                                                   control_eval_times,
                                                   controls)
 
-    def _evolve_step_schroedinger_discrete_custom_fwd(dt,
+    def _evolve_step_schroedinger_discrete_custom_fwd_unitary(dt,
                                                 states, densities, time,
                                                 control_eval_times,
                                                 controls):
@@ -829,7 +847,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
                             control_eval_times,
                             controls)
 
-    def _evolve_step_schroedinger_discrete_custom_bwd(res,g_prod):
+    def _evolve_step_schroedinger_discrete_custom_bwd_unitary(res,g_prod):
         dt,states,densities, time,control_eval_times,controls=res
         #Reapply the control signals and recompute unitary matrix
         t1 = time + dt * 0.5
@@ -859,8 +877,8 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
            dtype=hamiltonian_b.dtype)
         tempb = (t1-control_eval_times[index-1])*controls1b/(control_eval_times[index]-control_eval_times[index-1])
         controlsb = jnp.zeros(controls.shape, controls1b.dtype)
-        controlsb=jax.ops.index_update(controlsb, jax.ops.index[index-1],controls1b - tempb)
-        controlsb=jax.ops.index_update(controlsb, jax.ops.index[index],tempb)
+        controlsb = controlsb.at[index-1].set(controls1b - tempb)
+        controlsb = controlsb.at[index].set(tempb)
         return (0.0,statesb,densitiesb,0.0,0.0,-1*controlsb)
         
     _evolve_step_schroedinger_discrete_custom.defvjp(_evolve_step_schroedinger_discrete_custom_fwd, _evolve_step_schroedinger_discrete_custom_bwd)
