@@ -143,7 +143,7 @@ SYSTEM_EVAL_COUNT = CONTROL_EVAL_COUNT
 # to qoc, we always give qoc an array of states that we would like it to track,
 # even if we only give qoc a single state. The `,` in np.stack((INITIAL_STATE_0`,`))
 # makes a difference.
-
+'''
 initial0 = jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128)
 INITIAL_STATES = matrix_to_column_vector_list(jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128))
 assert(INITIAL_STATES.ndim == 3)
@@ -154,9 +154,13 @@ targetstates0=matrix_to_column_vector_list(ranunit0)
 TARGET_STATES=matrix_to_column_vector_list(ranunit0)
 target_density0 = np.matmul(ranunit0, conjugate_transpose(ranunit0))
 TARGET_DENSITIES = np.stack((target_density0,), axis=0)
-
+'''
+initial0 = jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128)
+INITIAL_STATES = np.array([np.kron(np.kron(np.kron(np.array([[1.0], [0.0]]), np.array([[1.0], [0.0]])), np.array([[1.0], [0.0]])), np.array([[1.0], [0.0]])) ],dtype=np.float64)
+density0 = np.matmul(INITIAL_STATES, conjugate_transpose(INITIAL_STATES))
+INITIAL_DENSITIES = np.stack((density0,), axis=0)  #[0]
 unitary0 = np.matmul(initial0, conjugate_transpose(initial0))
-INITIAL_UNITARIES = np.stack((unitary0,), axis=0)[0]
+INITIAL_UNITARIES = np.stack((unitary0,), axis=0)  #[0]
 
 coupling_J = 1.0 
 S_plus = 0.5 * (np.array(qt.operators.sigmax().data.toarray()) + 1j * np.array(qt.operators.sigmay().data.toarray()) )
@@ -164,7 +168,7 @@ S_minus = 0.5 * (np.array(qt.operators.sigmax().data.toarray()) - 1j * np.array(
 MODEL_HAMILTONIAN = - coupling_J * ( np.kron(np.kron(np.kron(S_plus, S_minus), S_plus), S_minus)
                                    + np.kron(np.kron(np.kron(S_minus, S_plus), S_minus), S_plus) )
 Time_system = 1.0 #ns
-TARGET_UNITARIES = np.expm(-1j * Time_system * MODEL_HAMILTONIAN)
+TARGET_UNITARIES = jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)
 
 # Costs are functions that we want qoc to minimize the output of.
 # In this example, we want to minimize the infidelity (maximize the fidelity) of
@@ -211,7 +215,7 @@ if USE_CUSTOM_INNER==-1:
 
 print("HILBERT_SIZE:\n{}"
       "".format(HILBERT_SIZE))
-print("SYSTEM_HAMILTONIAN:\n{}"
+print("DEVICE_HAMILTONIAN:\n{}"
       "".format(DEVICE_HAMILTONIAN))
 print("CONTROL_0",CONTROL_0)
 print("CONTROL_1",CONTROL_1)
