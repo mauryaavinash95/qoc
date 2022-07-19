@@ -265,10 +265,10 @@ def grape_schroedinger_discrete_unitary(control_count, control_eval_count,
     initial_controls = strip_controls(pstate.complex_controls, pstate.initial_controls)
     # Choose the propagator
     propagator = _evaluate_schroedinger_discrete_unitary
-    
+    '''
     if use_multilevel:
         propagator = _evaluate_schroedinger_discrete_multilevel_unitary
-    
+    '''
     # Run the optimization.
     pstate.optimizer.run(_esd_wrap, pstate.iteration_count, initial_controls,
                          _esdj_wrap, args=(pstate, reporter, result, propagator))
@@ -433,7 +433,7 @@ def _evaluate_schroedinger_discrete_unitary(controls, pstate, reporter):
         # Compute step costs every `cost_step`.
         if is_cost_step and not is_first_system_eval_step:
             for i, step_cost in enumerate(step_costs):
-                print('cost is state')
+                #print('step_cost is state')
                 cost_error = step_cost.cost(controls, states, system_eval_step)
                 error = error + cost_error
             #ENDFOR
@@ -452,15 +452,15 @@ def _evaluate_schroedinger_discrete_unitary(controls, pstate, reporter):
     # Compute non-step-costs.
     for i, cost in enumerate(costs):
         if not cost.requires_step_evaluation:
-            print(cost.cost)
-            if cost.cost == TargetDensityInfidelity.cost:
-                print('cost is density')
+            #print(cost)
+            if isinstance(cost, TargetDensityInfidelity):
+                #print('cost is density')
                 cost_error = cost.cost(controls, densities, final_system_eval_step)
-            elif cost.cost == TargetUnitaryInfidelity.cost:
-                print('cost is unitary')
+            elif isinstance(cost, TargetUnitaryInfidelity):
+                #print('cost is unitary')
                 cost_error = cost.cost(controls, unitaries, final_system_eval_step)
             else:
-                print('cost is state')
+                #print('cost is state')
                 cost_error = cost.cost(controls, states, final_system_eval_step)
             
             error = error + cost_error
@@ -605,9 +605,9 @@ def _evaluate_schroedinger_discrete_multilevel_unitary(controls, pstate, reporte
     # Compute non-step-costs.
     for i, cost in enumerate(costs):
         if not cost.requires_step_evaluation:
-            if cost.cost == TargetDensityInfidelity.cost:
+            if isinstance(cost, TargetDensityInfidelity):
                 cost_error = cost.cost(controls, densities, final_system_eval_step)
-            elif cost.cost == TargetUnitaryInfidelity.cost:
+            elif isinstance(cost, TargetUnitaryInfidelity):
                 cost_error = cost.cost(controls, unitaries, final_system_eval_step)
             else:
                 cost_error = cost.cost(controls, states, final_system_eval_step)
