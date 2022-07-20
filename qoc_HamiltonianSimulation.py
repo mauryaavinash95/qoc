@@ -143,9 +143,10 @@ SYSTEM_EVAL_COUNT = CONTROL_EVAL_COUNT
 # to qoc, we always give qoc an array of states that we would like it to track,
 # even if we only give qoc a single state. The `,` in np.stack((INITIAL_STATE_0`,`))
 # makes a difference.
+
+#initial0 = jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128)
+#INITIAL_STATES = matrix_to_column_vector_list(jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128))
 '''
-initial0 = jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128)
-INITIAL_STATES = matrix_to_column_vector_list(jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128))
 assert(INITIAL_STATES.ndim == 3)
 density0 = np.matmul(initial0, conjugate_transpose(initial0))
 INITIAL_DENSITIES = np.stack((density0,), axis=0)[0]
@@ -156,11 +157,16 @@ target_density0 = np.matmul(ranunit0, conjugate_transpose(ranunit0))
 TARGET_DENSITIES = np.stack((target_density0,), axis=0)
 '''
 initial0 = jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128)
+#INITIAL_STATES = np.array(np.kron(np.kron(np.kron(np.array([[1.0], [0.0]]), np.array([[1.0], [0.0]])), np.array([[1.0], [0.0]])), np.array([[1.0], [0.0]])) ,dtype=np.float64)
 INITIAL_STATES = np.array([np.kron(np.kron(np.kron(np.array([[1.0], [0.0]]), np.array([[1.0], [0.0]])), np.array([[1.0], [0.0]])), np.array([[1.0], [0.0]])) ],dtype=np.float64)
 density0 = np.matmul(INITIAL_STATES, conjugate_transpose(INITIAL_STATES))
-INITIAL_DENSITIES = np.stack((density0,), axis=0)  #[0]
+INITIAL_DENSITIES = np.stack((density0,), axis=0)[0]
 unitary0 = np.matmul(initial0, conjugate_transpose(initial0))
-INITIAL_UNITARIES = np.stack((unitary0,), axis=0)  #[0]
+INITIAL_UNITARIES = np.stack((unitary0,), axis=0)    #[0]
+
+print("INITIAL_STATES",INITIAL_STATES)
+print("INITIAL_DENSITIES",INITIAL_DENSITIES)
+print("INITIAL_UNITARIES",INITIAL_UNITARIES)
 
 coupling_J = 1.0 
 S_plus = 0.5 * (np.array(qt.operators.sigmax().data.toarray()) + 1j * np.array(qt.operators.sigmay().data.toarray()) )
@@ -169,6 +175,9 @@ MODEL_HAMILTONIAN = - coupling_J * ( np.kron(np.kron(np.kron(S_plus, S_minus), S
                                    + np.kron(np.kron(np.kron(S_minus, S_plus), S_minus), S_plus) )
 Time_system = 1.0 #ns
 TARGET_UNITARIES = jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)
+#print("S_plus",S_plus)
+#print("S_minus",S_minus)
+#print("MODEL_HAMILTONIAN",MODEL_HAMILTONIAN)
 
 # Costs are functions that we want qoc to minimize the output of.
 # In this example, we want to minimize the infidelity (maximize the fidelity) of
@@ -181,14 +190,14 @@ COSTS = [TargetUnitaryInfidelity(TARGET_UNITARIES), ]
 # are specified in units of optimization iterations.
 LOG_ITERATION_STEP = 1
 SAVE_INTERMEDIATE_STATES = True
-SAVE_ITERATION_STEP = 0
+SAVE_ITERATION_STEP = 0  #0
 
 # For this problem, the LBFGSB optimizer reaches a reasonable
 # answer very quickly.
 #OPTIMIZER = LBFGSB()
 OPTIMIZER = Adam()
 #ITERATION_COUNT = 20
-ITERATION_COUNT = 1
+ITERATION_COUNT = 5
 # In practice, we find that using a second-order optimizer, such as LBFGSB,
 # gives a good initial answer. Then, this answer may be used with a first-
 # order optimizer, such as Adam, to achieve the desired error.
@@ -196,7 +205,7 @@ ITERATION_COUNT = 1
 # `initial_controls` argument.
 
 #Decide whether to use multilevel loopnest instead of single loop
-USE_MULTILEVEL=True
+USE_MULTILEVEL=False   #True
 
 #Decide whether to use custom derivatives for single step
 #when USE_MULTILEVEL is False
@@ -212,7 +221,7 @@ if USE_CUSTOM_INNER==-1:
 	USE_CUSTOM_INNER = 2
 
 # Before we move on, it is a good idea to check that everything looks how you would expect it to.
-
+'''
 print("HILBERT_SIZE:\n{}"
       "".format(HILBERT_SIZE))
 print("DEVICE_HAMILTONIAN:\n{}"
@@ -228,11 +237,11 @@ print("SYSTEM_EVAL_TIMES:\n{}"
 print("TARGET_UNITARIES",TARGET_UNITARIES)
 #print("TARGET_STATES",TARGET_STATES)
 print("COSTS",COSTS)
-
+'''
 # qoc saves data in h5 format. You can parse h5 files using the `h5py` package [5].
 EXPERIMENT_NAME = "attempt_hamiltonian_simulation01"
 SAVE_PATH = "./out"
-SCHROED_FILE_PATH = generate_save_file_path(EXPERIMENT_NAME, SAVE_PATH)
+H_SIMULATION_FILE_PATH = generate_save_file_path(EXPERIMENT_NAME, SAVE_PATH)
 
 # Next, we use the GRAPE algorithm to find a set of time-dependent
 # controls that accomplishes the state transfer that we desire.
@@ -257,7 +266,7 @@ for i in range(rep_count):
                                      iteration_count=ITERATION_COUNT,
                                      log_iteration_step=LOG_ITERATION_STEP,
                                      optimizer=OPTIMIZER,
-                                     save_file_path=SCHROED_FILE_PATH,
+                                     save_file_path=H_SIMULATION_FILE_PATH,
                                      save_intermediate_states=SAVE_INTERMEDIATE_STATES,
                                      save_iteration_step=SAVE_ITERATION_STEP,
                                      use_multilevel=USE_MULTILEVEL,
@@ -279,13 +288,13 @@ with open('/proc/self/status', 'r') as f:
     print(f.read())
 '''
 # This function will plot the controls, and their fourier transform.
-plot_controls(SCHROED_FILE_PATH,
+plot_controls(H_SIMULATION_FILE_PATH,
               save_file_path=CONTROLS_PLOT_FILE_PATH,
               show=SHOW,)
 # This function will plot the values of the diagonal elements of the
 # density matrix that is formed by taking the outer product of the state
 # with itself.
-plot_state_population(SCHROED_FILE_PATH,
+plot_state_population(H_SIMULATION_FILE_PATH,
                       save_file_path=POPULATION_PLOT_FILE_PATH,
                       show=SHOW,)
 # Both of the above functions plot the iteration that achieved the lowest error
