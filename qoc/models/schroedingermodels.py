@@ -106,7 +106,7 @@ class EvolveSchroedingerDiscreteState(ProgramState):
             try:
                 with FileLock(self.save_file_lock_path):
                     with h5py.File(self.save_file_path, "a") as save_file:
-                        save_file["intermediate_states"][system_eval_step, :, :, :] = states.astype(np.complex128)
+                        save_file["intermediate_states"][system_eval_step, :, :, :] = states.astype(jnp.complex128)
             except Timeout:
                 print("Timeout while locking {} while saving intermediate states on iteration {}."
                       "".format(self.save_file_lock_path, iteration))
