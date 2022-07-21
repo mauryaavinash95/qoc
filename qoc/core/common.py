@@ -102,8 +102,8 @@ def gen_controls_white(complex_controls, control_count, control_eval_count,
     for i in range(control_count):
         max_norm = max_control_norms[i]
         stddev = max_norm/5.0
-        control = jnp.random.normal(0, stddev, control_eval_count)
-        controls[:, i] = control
+        control = onp.random.normal(0, stddev, control_eval_count)
+        controls = controls.at[:, i].set(control)
     #ENDFOR
 
     # Mimic the white noise for the imaginary parts, and normalize.
