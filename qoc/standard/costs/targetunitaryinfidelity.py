@@ -62,8 +62,8 @@ class TargetUnitaryInfidelity(Cost):
         for i, prod in enumerate(prods):
             inner_prod = np.trace(prod)
             fidelity = np.abs(inner_prod)
-            fidelity_sum = fidelity_sum + fidelity
-        fidelity_normalized = fidelity_sum / (self.unitary_count * self.hilbert_size)
+            fidelity_sum = fidelity_sum + fidelity**2
+        fidelity_normalized = fidelity_sum / (self.unitary_count * (self.hilbert_size ** 2) )
         infidelity = 1 - fidelity_normalized
 
         return infidelity * self.cost_multiplier
