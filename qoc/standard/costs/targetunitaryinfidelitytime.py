@@ -34,7 +34,7 @@ class TargetUnitaryInfidelityTime(Cost):
         """
         See class fields for arguments not listed here.
 
-        Arguments:
+        Arguments:Replace F = 1 - | tr(device_unitary_dagger target_unitary) | / D with Replace F = 1 - | tr(device_unitary_dagger target_unitary) |^2 / D^2
         target_unitaries
         """
         super().__init__(cost_multiplier=cost_multiplier)
@@ -68,8 +68,8 @@ class TargetUnitaryInfidelityTime(Cost):
         for i, prod in enumerate(prods):
             inner_prod = jnp.trace(prod)
             fidelity = jnp.abs(inner_prod)
-            fidelity_sum = fidelity_sum + fidelity
-        fidelity_normalized = fidelity_sum / (self.unitary_count * self.hilbert_size)
+            fidelity_sum = fidelity_sum + fidelity**2
+        fidelity_normalized = fidelity_sum / (self.unitary_count * (self.hilbert_size ** 2) )
         infidelity = 1 - fidelity_normalized
         cost_normalized = infidelity / self.cost_eval_count
 
