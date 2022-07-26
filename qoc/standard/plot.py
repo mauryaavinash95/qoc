@@ -33,7 +33,8 @@ COLOR_PALETTE_LEN = len(COLOR_PALETTE)
 
 ### MAIN METHODS ###
 
-def plot_controls(file_path, amplitude_unit="GHz", 
+def plot_controls(file_path, amplitude_unit="a.u.", 
+                  frequency_unit="GHz", 
                   dpi=1000,
                   marker_style="o", save_file_path=None,
                   save_index=None,
@@ -71,6 +72,7 @@ def plot_controls(file_path, amplitude_unit="GHz",
                 if save_index is None:
                     save_index = np.argmin(file_["error"])
                 complex_controls = file_["complex_controls"][()]
+                #print("complex_controls", complex_controls)
                 controls = file_["controls"][save_index][()]
                 evolution_time = file_["evolution_time"][()]
     except Timeout:
@@ -78,6 +80,7 @@ def plot_controls(file_path, amplitude_unit="GHz",
         return
     #ENDWITH
     control_count = controls.shape[1]
+    #print('control_count', control_count)
     control_eval_count = controls.shape[0]
     control_eval_times = np.linspace(0, evolution_time, control_eval_count)
     control_dt = control_eval_times[1] - control_eval_times[0]
@@ -91,16 +94,23 @@ def plot_controls(file_path, amplitude_unit="GHz",
     patches = list()
     labels = list()
     for i in range(control_count):
-        i2 = i * 2
-        label_real = "control_{}_real".format(i)
-        labels.append(label_real)
-        color_real = get_color(i2)
-        patches.append(mpatches.Patch(label=label_real, color=color_real))
-
-        label_imag = "control_{}_imag".format(i)
-        color_imag = get_color(i2 + 1)
-        labels.append(label_imag)
-        patches.append(mpatches.Patch(label=label_imag, color=color_imag))
+        if complex_controls:
+            i2 = i * 2
+            label_real = "control_{}_real".format(i)
+            labels.append(label_real)
+            color_real = get_color(i2)
+            patches.append(mpatches.Patch(label=label_real, color=color_real))
+    
+            label_imag = "control_{}_imag".format(i)
+            color_imag = get_color(i2 + 1)
+            labels.append(label_imag)
+            patches.append(mpatches.Patch(label=label_imag, color=color_imag))
+        else:
+            i2 = i * 2
+            label_real = "control_{}".format(i)
+            labels.append(label_real)
+            color_real = get_color(i2)
+            patches.append(mpatches.Patch(label=label_real, color=color_real))
     #ENDFOR
 
     # Set up the plots.
@@ -121,16 +131,26 @@ def plot_controls(file_path, amplitude_unit="GHz",
             color_imag = get_color(i2 + 1)
             control_real = controls_real[:, i]
             control_imag = controls_imag[:, i]
+            '''
             plt.plot(control_eval_times, control_real, marker_style,
                      color=color_real, ms=2, alpha=0.9)
             plt.plot(control_eval_times, control_imag, marker_style,
+                     color=color_imag, ms=2, alpha=0.9)
+            '''
+            plt.plot(control_eval_times, control_real, linestyle = '-',
+                     color=color_real, ms=2, alpha=0.9)
+            plt.plot(control_eval_times, control_imag, linestyle = '-',
                      color=color_imag, ms=2, alpha=0.9)
     else:
         for i in range(control_count):
             i2 = i * 2
             color= get_color(i2)
             control = controls[:, i]
+            '''
             plt.plot(control_eval_times, control, marker_style,
+                     color=color, ms=2, alpha=0.9)
+            '''
+            plt.plot(control_eval_times, control, linestyle = '-',
                      color=color, ms=2, alpha=0.9)
     #ENDIF
 
@@ -152,8 +172,16 @@ def plot_controls(file_path, amplitude_unit="GHz",
             ax.plot(freq_axis,
                     control_fft_squared_imag, marker_style, color=color_fft_imag,
                     ms=2,alpha=0.9)
+    else:
+        for i in range(control_count):
+            i2 = i * 2 
+            color_fft_real = get_color(i2)
+            control_fft_abs = np.abs(np.fft.fft(controls[:, i]))            
+            ax.plot(freq_axis,
+                    control_fft_abs, linestyle = '-', color=color_fft_real,
+                    ms=2,alpha=0.9)
     #ENDFOR
-    ax.set_xlabel("Frequency ({})".format(amplitude_unit))
+    ax.set_xlabel("Frequency ({})".format(frequency_unit))
     ax.set_ylabel("FFT")
     
     freq_index_max = np.argmax(freq_axis)
@@ -179,7 +207,7 @@ def plot_density_population(file_path,
                             density_index=0,
                             dpi=1000,
                             marker_style="o",
-                            save_file_path=None,
+                             save_file_path=None,
                             save_index=None,
                             show=False,
                             time_unit="ns",
