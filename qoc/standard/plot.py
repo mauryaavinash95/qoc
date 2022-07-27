@@ -308,9 +308,7 @@ def plot_density_population(file_path,
                     if save_index is None:
                         save_index = np.argmin(file_["error"])
                         intermediate_densities = file_["intermediate_densities"][save_index, :, density_index, :, :]
-            #ENDWITHfile_name = os.path.splitext(ntpath.basename(file_path))[0]
-            if title is None:
-                title = file_name
+            #ENDWITH
         #ENDWITH
     except Timeout:
         print("Could not access the specified file.")
