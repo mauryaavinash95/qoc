@@ -75,6 +75,7 @@ def plot_controls(file_path, amplitude_unit="a.u.",
                 #print("complex_controls", complex_controls)
                 controls = file_["controls"][save_index][()]
                 evolution_time = file_["evolution_time"][()]
+                #error_list = file_["error"][()]
     except Timeout:
         print("Could not access specified file.")
         return
@@ -152,6 +153,7 @@ def plot_controls(file_path, amplitude_unit="a.u.",
             '''
             plt.plot(control_eval_times, control, linestyle = '-',
                      color=color, ms=2, alpha=0.9)
+            #print('control {} is:\n {}'.format(i, control) )
     #ENDIF
 
     # Plot the fft.
@@ -193,8 +195,8 @@ def plot_controls(file_path, amplitude_unit="a.u.",
     
     if fft_tick_count is not None:
         ticks = np.linspace(fft_freq_lo, fft_freq_hi, fft_tick_count)
-        ax.set_xticks(ticks)
-
+        ax.set_xticks(ticks)    
+    
     # Export.
     if save_file_path is not None:
         plt.savefig(save_file_path, dpi=dpi)
@@ -202,7 +204,69 @@ def plot_controls(file_path, amplitude_unit="a.u.",
     if show:
         plt.show()
 
+def plot_error(file_path, 
+                  dpi=1000,
+                  marker_style="o", save_file_path=None,
+                  save_index=None,
+                  show=False,
+                  title=None,):
+    """
+    Plot the controls,  and their discrete fast fourier transform.
 
+    Arguments:
+    file_path
+    
+    dpi
+    marker_style
+    save_file_path
+    save_index
+    show
+
+    Returns: None
+    """
+    # Open the file; extract data.
+    file_lock_path = "{}.lock".format(file_path)
+    try:
+        with FileLock(file_lock_path):
+            with h5py.File(file_path, "r") as file_:
+                error_list = file_["error"][()]
+    except Timeout:
+        print("Could not access specified file.")
+        return
+    #ENDWITH
+    
+    file_name = os.path.splitext(ntpath.basename(file_path))[0]
+    if title is None:
+        title = file_name
+        
+    error_list = error_list[error_list < 1.01]        
+    iter_ = np.arange(len(error_list), dtype=np.int)
+    
+    plt.figure()
+    plt.suptitle(title)
+    '''
+    plt.figlegend(handles=patches, labels=labels, loc="upper right",
+                  framealpha=0.5)
+    plt.subplots_adjust(hspace=0.8)
+    '''
+    # Plot the error.
+    #plt.subplot(2, 1, 1)
+    ax = plt.subplot(1, 1, 1)
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("Infidelity")
+    ax.set_ybound(lower=0.0, upper=1.0)
+    ax.plot(iter_, error_list, marker_style,
+             color='blue', ms=2, alpha=0.9)
+    
+    #print(iter_)
+    #print(error_list)
+    # Export.
+    if save_file_path is not None:
+        plt.savefig(save_file_path, dpi=dpi)
+        
+    if show:
+        plt.show()
+    
 def plot_density_population(file_path,
                             density_index=0,
                             dpi=1000,
@@ -244,7 +308,9 @@ def plot_density_population(file_path,
                     if save_index is None:
                         save_index = np.argmin(file_["error"])
                         intermediate_densities = file_["intermediate_densities"][save_index, :, density_index, :, :]
-            #ENDWITH
+            #ENDWITHfile_name = os.path.splitext(ntpath.basename(file_path))[0]
+            if title is None:
+                title = file_name
         #ENDWITH
     except Timeout:
         print("Could not access the specified file.")
