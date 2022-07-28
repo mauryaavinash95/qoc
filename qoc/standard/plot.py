@@ -229,7 +229,8 @@ def plot_error(file_path,
     try:
         with FileLock(file_lock_path):
             with h5py.File(file_path, "r") as file_:
-                error_list = file_["error"][()]
+                error = file_["error"][()]
+                grads = file_["grads"][()]
     except Timeout:
         print("Could not access specified file.")
         return
@@ -238,9 +239,10 @@ def plot_error(file_path,
     file_name = os.path.splitext(ntpath.basename(file_path))[0]
     if title is None:
         title = file_name
-        
-    error_list = error_list[error_list < 1.01]        
-    iter_ = np.arange(len(error_list), dtype=np.int)
+    
+    grads = grads[error < 1.01] 
+    error = error[error < 1.01]       
+    iter_ = np.arange(len(error), dtype=np.int)
     
     plt.figure()
     plt.suptitle(title)
@@ -251,11 +253,18 @@ def plot_error(file_path,
     '''
     # Plot the error.
     #plt.subplot(2, 1, 1)
-    ax = plt.subplot(1, 1, 1)
-    ax.set_xlabel("Iteration")
-    ax.set_ylabel("Infidelity")
-    ax.set_ybound(lower=0.0, upper=1.0)
-    ax.plot(iter_, error_list, marker_style,
+    ax1 = plt.subplot(2, 1, 1)
+    ax1.set_xlabel("Iteration")
+    ax1.set_ylabel("Infidelity")
+    ax1.set_ybound(lower=0.0, upper=1.0)
+    ax1.plot(iter_, error, marker_style,
+             color='blue', ms=2, alpha=0.9)
+    
+    ax2 = plt.subplot(2, 1, 2)
+    ax2.set_xlabel("Iteration")
+    ax2.set_ylabel("Grads_l2")
+    ax2.set_ybound(lower=0.0, )
+    ax2.plot(iter_, error, marker_style,
              color='blue', ms=2, alpha=0.9)
     
     #print(iter_)
