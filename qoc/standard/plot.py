@@ -230,7 +230,7 @@ def plot_error(file_path,
         with FileLock(file_lock_path):
             with h5py.File(file_path, "r") as file_:
                 error = file_["error"][()]
-                grads = file_["grads"][()]
+                #grads = file_["grads"][()]
     except Timeout:
         print("Could not access specified file.")
         return
@@ -240,7 +240,7 @@ def plot_error(file_path,
     if title is None:
         title = file_name
     
-    grads = grads[error < 1.01] 
+    #grads = grads[error < 1.01] 
     error = error[error < 1.01]       
     iter_ = np.arange(len(error), dtype=np.int)
     
@@ -253,20 +253,20 @@ def plot_error(file_path,
     '''
     # Plot the error.
     #plt.subplot(2, 1, 1)
-    ax1 = plt.subplot(2, 1, 1)
+    ax1 = plt.subplot(1, 1, 1)
     ax1.set_xlabel("Iteration")
     ax1.set_ylabel("Infidelity")
     ax1.set_ybound(lower=0.0, upper=1.0)
     ax1.plot(iter_, error, marker_style,
              color='blue', ms=2, alpha=0.9)
-    
+    '''
     ax2 = plt.subplot(2, 1, 2)
     ax2.set_xlabel("Iteration")
     ax2.set_ylabel("Grads_l2")
     ax2.set_ybound(lower=0.0, )
     ax2.plot(iter_, grads, marker_style,
              color='blue', ms=2, alpha=0.9)
-    
+    '''
     #print(iter_)
     #print(error_list)
     # Export.
