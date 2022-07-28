@@ -264,7 +264,7 @@ def plot_error(file_path,
     ax2.set_xlabel("Iteration")
     ax2.set_ylabel("Grads_l2")
     ax2.set_ybound(lower=0.0, )
-    ax2.plot(iter_, error, marker_style,
+    ax2.plot(iter_, grads, marker_style,
              color='blue', ms=2, alpha=0.9)
     
     #print(iter_)
