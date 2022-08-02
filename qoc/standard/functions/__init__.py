@@ -10,8 +10,12 @@ from qoc.standard.functions.convenience import (commutator,
                                                 column_vector_list_to_matrix,
                                                 matrix_to_column_vector_list,)
 
+from qoc.standard.functions.generatingHamiltonian import (corner_terms,
+                                                plaquette_terms,)
+
 __all__ = [
     "commutator", "conjugate_transpose", "krons", "matmuls",
     "rms_norm",
-    "column_vector_list_to_matrix", "matrix_to_column_vector_list"
+    "column_vector_list_to_matrix", "matrix_to_column_vector_list",
+    "corner_terms", "plaquette_terms"
 ]
