@@ -31,7 +31,7 @@ from qoc.standard import (Adam,
     conjugate_transpose, generate_save_file_path,
     get_creation_operator, get_annihilation_operator,
     krons, LBFGSB, matmuls, plot_controls, plot_density_population,
-    plot_state_population, TargetUnitaryInfidelity, 
+    plot_state_population, plot_error, TargetUnitaryInfidelity, 
     matrix_to_column_vector_list,)
 
 import jax
@@ -40,10 +40,10 @@ import matplotlib
 
 # Define the size of the system.
 argv = sys.argv[1:]
-QUBIT_COUNT=4
-CONTROL_EVAL_COUNT = int(1e2)
-USE_CUSTOM_INNER=-1
-CHECKPOINT_INTERVAL=10
+QUBIT_COUNT = 4    #4
+CONTROL_EVAL_COUNT = int(500)
+USE_CUSTOM_INNER = -1
+CHECKPOINT_INTERVAL = 10
 try:
     opts, args = getopt.getopt(argv,"hq:s:i:c:",["qubit="])
 except getopt.GetoptError:
@@ -79,37 +79,69 @@ CONTROL_0_DAGGER = np.array((qt.rand_herm(HILBERT_SIZE).data).toarray())
 CONTROL_1 = np.array((qt.rand_herm(HILBERT_SIZE).data).toarray())
 CONTROL_1_DAGGER = np.array((qt.rand_herm(HILBERT_SIZE).data).toarray())
 '''
-DEVICE_HAMILTONIAN = 0.5 * ( np.kron(np.kron(np.kron(np.array(qt.operators.sigmaz().data.toarray()), np.identity(2)), np.identity(2)), np.identity(2))
+'''
+DEVICE_HAMILTONIAN = 5.0 * (np.kron(np.kron(np.kron(np.array(qt.operators.sigmaz().data.toarray()), np.identity(2)), np.identity(2)), np.identity(2))
                      + np.kron(np.kron(np.kron(np.identity(2), np.array(qt.operators.sigmaz().data.toarray())), np.identity(2)), np.identity(2))
                      + np.kron(np.kron(np.kron(np.identity(2), np.identity(2)), np.array(qt.operators.sigmaz().data.toarray())), np.identity(2))
                      + np.kron(np.kron(np.kron(np.identity(2), np.identity(2)), np.identity(2)), np.array(qt.operators.sigmaz().data.toarray())) )
-CONTROL_0 = 0.25 * ( np.kron(np.kron(np.kron(np.array(qt.operators.sigmax().data.toarray()), np.array(qt.operators.sigmax().data.toarray())), np.identity(2)), np.identity(2))
+CONTROL_0 = 0.25 * ( np.kron(np.kron(np.kron(np.array(qt.operators.sigmax().data.toarray()), np.array(qt.operators.sigmax().data.toarray())), np.identity(2)), np.identity(2)) 
             + np.kron(np.kron(np.kron(np.array(qt.operators.sigmay().data.toarray()), np.array(qt.operators.sigmay().data.toarray())), np.identity(2)), np.identity(2)) )
-CONTROL_1 = 0.25 * ( np.kron(np.kron(np.kron(np.identity(2), np.array(qt.operators.sigmax().data.toarray())), np.array(qt.operators.sigmax().data.toarray())), np.identity(2))
+CONTROL_1 = 0.25 * ( np.kron(np.kron(np.kron(np.identity(2), np.array(qt.operators.sigmax().data.toarray())), np.array(qt.operators.sigmax().data.toarray())), np.identity(2)) 
             + np.kron(np.kron(np.kron(np.identity(2), np.array(qt.operators.sigmay().data.toarray())), np.array(qt.operators.sigmay().data.toarray())), np.identity(2)) )
-CONTROL_2 = 0.25 * ( np.kron(np.kron(np.kron(np.identity(2), np.identity(2)), np.array(qt.operators.sigmax().data.toarray())), np.array(qt.operators.sigmax().data.toarray()))
+CONTROL_2 = 0.25 * ( np.kron(np.kron(np.kron(np.identity(2), np.identity(2)), np.array(qt.operators.sigmax().data.toarray())), np.array(qt.operators.sigmax().data.toarray())) 
             + np.kron(np.kron(np.kron(np.identity(2), np.identity(2)), np.array(qt.operators.sigmay().data.toarray())), np.array(qt.operators.sigmay().data.toarray())) )
-CONTROL_3 = 0.25 * ( np.kron(np.kron(np.kron(np.array(qt.operators.sigmax().data.toarray()), np.identity(2)), np.identity(2)), np.array(qt.operators.sigmax().data.toarray()))
+CONTROL_3 = 0.25 * ( np.kron(np.kron(np.kron(np.array(qt.operators.sigmax().data.toarray()), np.identity(2)), np.identity(2)), np.array(qt.operators.sigmax().data.toarray())) 
             + np.kron(np.kron(np.kron(np.array(qt.operators.sigmay().data.toarray()), np.identity(2)), np.identity(2)), np.array(qt.operators.sigmay().data.toarray())) )
+'''
+DEVICE_HAMILTONIAN = ( 0.5 * (np.kron(np.kron(np.kron(np.array(qt.operators.sigmaz().data.toarray()), np.identity(2)), np.identity(2)), np.identity(2))
+                     + np.kron(np.kron(np.kron(np.identity(2), np.array(qt.operators.sigmaz().data.toarray())), np.identity(2)), np.identity(2))
+                     + np.kron(np.kron(np.kron(np.identity(2), np.identity(2)), np.array(qt.operators.sigmaz().data.toarray())), np.identity(2))
+                     + np.kron(np.kron(np.kron(np.identity(2), np.identity(2)), np.identity(2)), np.array(qt.operators.sigmaz().data.toarray())) )
+                   + 0.25 * ( np.kron(np.kron(np.kron(np.array(qt.operators.sigmax().data.toarray()), np.array(qt.operators.sigmax().data.toarray())), np.identity(2)), np.identity(2)) 
+                     + np.kron(np.kron(np.kron(np.identity(2), np.array(qt.operators.sigmax().data.toarray())), np.array(qt.operators.sigmax().data.toarray())), np.identity(2)) 
+                     + np.kron(np.kron(np.kron(np.identity(2), np.identity(2)), np.array(qt.operators.sigmax().data.toarray())), np.array(qt.operators.sigmax().data.toarray()))
+                     + np.kron(np.kron(np.kron(np.array(qt.operators.sigmax().data.toarray()), np.identity(2)), np.identity(2)), np.array(qt.operators.sigmax().data.toarray())) )
+                   + 0.25 * ( np.kron(np.kron(np.kron(np.array(qt.operators.sigmay().data.toarray()), np.array(qt.operators.sigmay().data.toarray())), np.identity(2)), np.identity(2)) 
+                     + np.kron(np.kron(np.kron(np.identity(2), np.array(qt.operators.sigmay().data.toarray())), np.array(qt.operators.sigmay().data.toarray())), np.identity(2)) 
+                     + np.kron(np.kron(np.kron(np.identity(2), np.identity(2)), np.array(qt.operators.sigmay().data.toarray())), np.array(qt.operators.sigmay().data.toarray()))
+                     + np.kron(np.kron(np.kron(np.array(qt.operators.sigmay().data.toarray()), np.identity(2)), np.identity(2)), np.array(qt.operators.sigmay().data.toarray())) )  )
+CONTROL_0 = 0.5 * np.kron(np.kron(np.kron(np.array(qt.operators.sigmax().data.toarray()), np.identity(2)), np.identity(2)), np.identity(2))
+CONTROL_1 = 0.5 * np.kron(np.kron(np.kron(np.identity(2), np.array(qt.operators.sigmax().data.toarray())), np.identity(2)), np.identity(2))
+CONTROL_2 = 0.5 * np.kron(np.kron(np.kron(np.identity(2), np.identity(2)), np.array(qt.operators.sigmax().data.toarray())), np.identity(2))
+CONTROL_3 = 0.5 * np.kron(np.kron(np.kron(np.identity(2), np.identity(2)), np.identity(2)), np.array(qt.operators.sigmax().data.toarray()))
+'''
+#DEVICE_HAMILTONIAN = 0.3 * (np.array([[1.0, 0.0], [0.0, -1.0]]) )
+#CONTROL_0 = 1.0 * ( np.array(qt.operators.sigmax().data.toarray() ) )
 
+DEVICE_HAMILTONIAN = ( 0.25 * (np.kron(np.array(qt.operators.sigmax().data.toarray()), np.array(qt.operators.sigmax().data.toarray()) ) )
+                      + 0.5 * (np.kron(np.array(qt.operators.sigmaz().data.toarray()), np.identity(2) ) )
+                      + 0.5 * (np.kron(np.identity(2), np.array(qt.operators.sigmaz().data.toarray()) ) ) )
+CONTROL_0 = 1.0 * (np.kron(np.array(qt.operators.sigmax().data.toarray()), np.identity(2) ) )
+CONTROL_1 = 1.0 * (np.kron(np.identity(2), np.array(qt.operators.sigmax().data.toarray()) ) )
+'''
 def hamiltonian(controls, time):
     return (DEVICE_HAMILTONIAN
             + controls[0] * CONTROL_0
             + controls[1] * CONTROL_1
             + controls[2] * CONTROL_2
             + controls[3] * CONTROL_3)
-
+'''
+def hamiltonian(controls, time):
+    return (DEVICE_HAMILTONIAN
+            + controls[0] * CONTROL_0
+            + controls[1] * CONTROL_1)
+'''
 # Additionally, we need to specify information to qoc about...
 # how long our system will evolve for
-EVOLUTION_TIME = 15 #ns
+EVOLUTION_TIME = 100 #15 #ns
 # how many controls we have
-CONTROL_COUNT = 4
+CONTROL_COUNT = 4    #4
 # what domain our controls are in
 COMPLEX_CONTROLS = False
 # where our controls are positioned in time
 #CONTROL_EVAL_COUNT = int(1e3)
 # and where our system is evaluated in time
-#SYSTEM_EVAL_COUNT = int(1e2)
+#SYSTEM_EVAL_COUNT = iunitary_countnt(1e2)
 SYSTEM_EVAL_COUNT = CONTROL_EVAL_COUNT
 # Note that `CONTROL_COUNT` is the length of the `controls` array that is passed
 # to our `hamiltonian` function.
@@ -159,22 +191,34 @@ TARGET_DENSITIES = np.stack((target_density0,), axis=0)
 initial0 = jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128)
 #INITIAL_STATES = np.array(np.kron(np.kron(np.kron(np.array([[1.0], [0.0]]), np.array([[1.0], [0.0]])), np.array([[1.0], [0.0]])), np.array([[1.0], [0.0]])) ,dtype=np.float64)
 INITIAL_STATES = np.array([np.kron(np.kron(np.kron(np.array([[1.0], [0.0]]), np.array([[1.0], [0.0]])), np.array([[1.0], [0.0]])), np.array([[1.0], [0.0]])) ],dtype=np.float64)
-density0 = np.matmul(INITIAL_STATES, conjugate_transpose(INITIAL_STATES))
-INITIAL_DENSITIES = np.stack((density0,), axis=0)[0]
+#INITIAL_STATES = np.array([np.array([[1.0], [0.0], [0.0], [0.0]])], dtype=np.float64)
+#density0 = np.matmul(INITIAL_STATES, conjugate_transpose(INITIAL_STATES))
+#INITIAL_DENSITIES = np.stack((density0,), axis=0)[0]
 unitary0 = np.matmul(initial0, conjugate_transpose(initial0))
 INITIAL_UNITARIES = np.stack((unitary0,), axis=0)    #[0]
+#INITIAL_UNITARIES = np.array([qt.operators.sigmax().data.toarray()], dtype=np.complex128)
 
 print("INITIAL_STATES",INITIAL_STATES)
-print("INITIAL_DENSITIES",INITIAL_DENSITIES)
+#print("INITIAL_DENSITIES",INITIAL_DENSITIES)
 print("INITIAL_UNITARIES",INITIAL_UNITARIES)
 
 coupling_J = 1.0 
+coupling_V = 1.0
+
 S_plus = 0.5 * (np.array(qt.operators.sigmax().data.toarray()) + 1j * np.array(qt.operators.sigmay().data.toarray()) )
 S_minus = 0.5 * (np.array(qt.operators.sigmax().data.toarray()) - 1j * np.array(qt.operators.sigmay().data.toarray()) )
 MODEL_HAMILTONIAN = - coupling_J * ( np.kron(np.kron(np.kron(S_plus, S_minus), S_plus), S_minus)
                                    + np.kron(np.kron(np.kron(S_minus, S_plus), S_minus), S_plus) )
-Time_system = 1.0 #ns
-TARGET_UNITARIES = jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)
+
+MODEL_HAMILTONIAN = MODEL_HAMILTONIAN + coupling_V * (np.kron(np.kron(np.kron(np.array(qt.operators.sigmaz().data.toarray()), np.array(qt.operators.sigmaz().data.toarray())), np.identity(2)), np.identity(2))
+                                + np.kron(np.kron(np.kron(np.identity(2), np.array(qt.operators.sigmaz().data.toarray())), np.array(qt.operators.sigmaz().data.toarray())), np.identity(2))
+                                + np.kron(np.kron(np.kron(np.identity(2), np.identity(2)), np.array(qt.operators.sigmaz().data.toarray())), np.array(qt.operators.sigmaz().data.toarray()))
+                                + np.kron(np.kron(np.kron(np.array(qt.operators.sigmaz().data.toarray()), np.identity(2)), np.identity(2)), np.array(qt.operators.sigmaz().data.toarray())) )
+Time_system = 0.01 #ns
+TARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)], dtype=np.complex128)
+
+#TARGET_UNITARIES = np.array([np.array(qt.operators.sigmax().data.toarray())], dtype=np.complex128)
+#TARGET_UNITARIES = np.array([np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])], dtype=np.complex128)
 #print("S_plus",S_plus)
 #print("S_minus",S_minus)
 #print("MODEL_HAMILTONIAN",MODEL_HAMILTONIAN)
@@ -190,14 +234,15 @@ COSTS = [TargetUnitaryInfidelity(TARGET_UNITARIES), ]
 # are specified in units of optimization iterations.
 LOG_ITERATION_STEP = 1
 SAVE_INTERMEDIATE_STATES = True
-SAVE_ITERATION_STEP = 0  #0
+SAVE_ITERATION_STEP = 1  #0
+# set SAVE_ITERATION_STEP to 1 to save results
 
 # For this problem, the LBFGSB optimizer reaches a reasonable
 # answer very quickly.
 #OPTIMIZER = LBFGSB()
 OPTIMIZER = Adam()
 #ITERATION_COUNT = 20
-ITERATION_COUNT = 5
+ITERATION_COUNT = 1000
 # In practice, we find that using a second-order optimizer, such as LBFGSB,
 # gives a good initial answer. Then, this answer may be used with a first-
 # order optimizer, such as Adam, to achieve the desired error.
@@ -221,7 +266,7 @@ if USE_CUSTOM_INNER==-1:
 	USE_CUSTOM_INNER = 2
 
 # Before we move on, it is a good idea to check that everything looks how you would expect it to.
-'''
+
 print("HILBERT_SIZE:\n{}"
       "".format(HILBERT_SIZE))
 print("DEVICE_HAMILTONIAN:\n{}"
@@ -230,16 +275,18 @@ print("CONTROL_0",CONTROL_0)
 print("CONTROL_1",CONTROL_1)
 print("CONTROL_2",CONTROL_2)
 print("CONTROL_3",CONTROL_3)
+'''
 print("CONTROL_EVAL_TIMES:\n{}"
       "".format(np.linspace(0, EVOLUTION_TIME, CONTROL_EVAL_COUNT)))
 print("SYSTEM_EVAL_TIMES:\n{}"
       "".format(np.linspace(0, EVOLUTION_TIME, SYSTEM_EVAL_COUNT)))
+'''
 print("TARGET_UNITARIES",TARGET_UNITARIES)
 #print("TARGET_STATES",TARGET_STATES)
 print("COSTS",COSTS)
-'''
+
 # qoc saves data in h5 format. You can parse h5 files using the `h5py` package [5].
-EXPERIMENT_NAME = "attempt_hamiltonian_simulation01"
+EXPERIMENT_NAME = "2D_LatticeGauge_simulation_cornerZ_and_plaquettedagger"
 SAVE_PATH = "./out"
 H_SIMULATION_FILE_PATH = generate_save_file_path(EXPERIMENT_NAME, SAVE_PATH)
 
@@ -256,10 +303,12 @@ for i in range(rep_count):
                                      hamiltonian,
                                      HILBERT_SIZE,
                                      DEVICE_HAMILTONIAN,
-                                     CONTROL_0,CONTROL_1,
-                                     CONTROL_2,CONTROL_3,
+                                     CONTROL_0,
+                                     CONTROL_1,
+                                     CONTROL_2,
+                                     CONTROL_3,
                                      INITIAL_STATES,
-                                     INITIAL_DENSITIES,
+                                     #INITIAL_DENSITIES,
                                      INITIAL_UNITARIES,
                                      SYSTEM_EVAL_COUNT,
                                      complex_controls=COMPLEX_CONTROLS,
@@ -278,15 +327,17 @@ tot_time= (toc-tic)/rep_count
 #print(f"Time to run code: {toc - tic:0.4f} seconds")
 print(f"Time to run code: {tot_time:0.4f} seconds")
 # Next, we want to do some analysis of our results.
-CONTROLS_PLOT_FILE = "{}_controls.png".format(EXPERIMENT_NAME)
+CONTROLS_PLOT_FILE = "{}_controls_FFT.png".format(EXPERIMENT_NAME)
 CONTROLS_PLOT_FILE_PATH = os.path.join(SAVE_PATH, CONTROLS_PLOT_FILE)
 POPULATION_PLOT_FILE = "{}_population.png".format(EXPERIMENT_NAME)
 POPULATION_PLOT_FILE_PATH = os.path.join(SAVE_PATH, POPULATION_PLOT_FILE)
+ERROR_PLOT_FILE = "{}_infidelity.png".format(EXPERIMENT_NAME)
+ERROR_PLOT_FILE_PATH = os.path.join(SAVE_PATH, ERROR_PLOT_FILE)
 SHOW = True
 jax.profiler.save_device_memory_profile("memory_"+str(QUBIT_COUNT)+"_"+str(CONTROL_EVAL_COUNT)+"_"+str(CHECKPOINT_INTERVAL)+"_"+str(USE_CUSTOM_INNER)+".prof")
 with open('/proc/self/status', 'r') as f:
     print(f.read())
-'''
+
 # This function will plot the controls, and their fourier transform.
 plot_controls(H_SIMULATION_FILE_PATH,
               save_file_path=CONTROLS_PLOT_FILE_PATH,
@@ -294,6 +345,10 @@ plot_controls(H_SIMULATION_FILE_PATH,
 # This function will plot the values of the diagonal elements of the
 # density matrix that is formed by taking the outer product of the state
 # with itself.
+plot_error(H_SIMULATION_FILE_PATH,
+              save_file_path=ERROR_PLOT_FILE_PATH,
+              show=SHOW,)
+'''
 plot_state_population(H_SIMULATION_FILE_PATH,
                       save_file_path=POPULATION_PLOT_FILE_PATH,
                       show=SHOW,)
