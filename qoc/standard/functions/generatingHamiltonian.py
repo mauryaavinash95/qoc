@@ -7,8 +7,6 @@ Created on Mon Aug  1 13:29:23 2022
 """
 
 # This is the code for generating the Hamiltonians of 2D Lattice Gauge Theory.
-# It works for rectangular lattice only. The number of vertices along the two sides are required.
-# Qubits sit at the sides.
 
 import jax.numpy as jnp
 import numpy as onp
@@ -16,6 +14,8 @@ import qutip as qt
 from functools import reduce
 
 def corner_terms(length, width, sigma = jnp.array(qt.operators.sigmaz().data.toarray()) ):
+    # It works for rectangular lattice only. The number of vertices along the two sides are required.
+    # Qubits sit at the sides.
     # length is the number of vertices along one side
     # width is the number of vertices along the other side
     
@@ -55,6 +55,8 @@ def corner_terms(length, width, sigma = jnp.array(qt.operators.sigmaz().data.toa
 def plaquette_terms(length, width, 
                     S_plus = 0.5 * (jnp.array(qt.operators.sigmax().data.toarray()) + 1j * jnp.array(qt.operators.sigmay().data.toarray()) ),
                     S_minus = 0.5 * (jnp.array(qt.operators.sigmax().data.toarray()) - 1j * jnp.array(qt.operators.sigmay().data.toarray()) ) ):
+    # It works for rectangular lattice only. The number of vertices along the two sides are required.
+    # Qubits sit at the sides.
     # length is the number of vertices along one side
     # width is the number of vertices along the other side
     
@@ -88,6 +90,72 @@ def plaquette_terms(length, width,
                 matrices.append(S_minus)
             elif flags[plaquette_idx, qubit_idx] == -1:
                 matrices.append(S_plus)
+            else:
+                matrices.append(jnp.identity(2,dtype=jnp.complex128) )
+        hamiltonian = hamiltonian + reduce(jnp.kron, matrices)
+        
+    return hamiltonian
+
+def single_qubit_terms(length, width, sigma = jnp.array(qt.operators.sigmaz().data.toarray()) ):
+    # It works for rectangular lattice only. The number of vertices along the two sides are required.
+    # Qubits sit at the sides.
+    # length is the number of vertices along one side
+    # width is the number of vertices along the other side
+    
+    qubit_count = int( (length - 1) * width + (width - 1) * length )
+    hilbert_size = 2 ** qubit_count
+    flags = jnp.zeros((qubit_count, qubit_count), dtype=jnp.bool_)
+    for qubit_idx in range(0, qubit_count):
+        flags[qubit_idx, qubit_idx] = True
+    
+    hamiltonian = jnp.zeros((hilbert_size, hilbert_size), dtype=jnp.complex128)
+    for qubit_idx in range(0, qubit_count):        
+        matrices = []
+        for qubit_idx2 in range(0, qubit_count):
+            if flags[qubit_idx, qubit_idx2] == True:
+                matrices.append(sigma)
+            else:
+                matrices.append(jnp.identity(2,dtype=jnp.complex128) )
+        hamiltonian = hamiltonian + reduce(jnp.kron, matrices)
+        
+    return hamiltonian
+
+def corner_terms_2(length, width, sigma = jnp.array(qt.operators.sigmaz().data.toarray()) ):
+    # It works for rectangular lattice only. The number of vertices along the two sides are required.
+    # Qubits sit at the vertices.
+    # length is the number of vertices along one side. It must be even number
+    # width is the number of vertices along the other side. It must be even number
+    
+    assert(length % 2 == 0)
+    assert(width % 2 == 0)
+    
+    qubit_count = int( length * width )
+    plaquette_count = int( (length / 2) * (width / 2) + (length / 2 - 1) * (width / 2 - 1) )
+    corner_count = int( plaquette_count * 4 )
+    hilbert_size = 2 ** qubit_count
+    flags = jnp.zeros((corner_count, qubit_count), dtype=jnp.bool_)
+    corner_idx = 0
+    for plaquette_idx in range(0, plaquette_count):
+        (plaquette_row, plaquette_remainder) = onp.divmod(plaquette_idx, ( length - 1 ) )
+        first_qubit_idx = (length + (length - 1) ) * plaquette_row + plaquette_remainder
+        flags[corner_idx, first_qubit_idx] = True
+        flags[corner_idx, first_qubit_idx + (length - 1)] = True
+        flags[corner_idx + 1, first_qubit_idx] = True
+        flags[corner_idx + 1, first_qubit_idx + length] = True
+        flags[corner_idx + 2, first_qubit_idx + (length - 1)] = True
+        flags[corner_idx + 2, first_qubit_idx + length + (length - 1)] = True
+        flags[corner_idx + 3, first_qubit_idx + length] = True
+        flags[corner_idx + 3, first_qubit_idx + length + (length - 1)] = True
+        corner_idx += 4
+    
+    assert(corner_idx == corner_count)
+    
+    hamiltonian = jnp.zeros((hilbert_size, hilbert_size), dtype=jnp.complex128)
+    for corner_idx in range(0, corner_count):        
+        matrices = []
+        for qubit_idx in range(0, qubit_count):
+            if flags[corner_idx, qubit_idx] == True:
+                matrices.append(sigma)
             else:
                 matrices.append(jnp.identity(2,dtype=jnp.complex128) )
         hamiltonian = hamiltonian + reduce(jnp.kron, matrices)
