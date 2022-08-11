@@ -121,6 +121,33 @@ def single_qubit_terms(length, width, sigma = jnp.array(qt.operators.sigmaz().da
         
     return hamiltonian
 
+def single_qubit_terms_custom(length, width, control_count, control_qubit_list, sigma = jnp.array(qt.operators.sigmaz().data.toarray()) ):
+    # It works for rectangular lattice only. The number of vertices along the two sides are required.
+    # Qubits sit at the edges.
+    # length is the number of vertices along one side
+    # width is the number of vertices along the other side
+    
+    qubit_count = int( length * width )
+    hilbert_size = 2 ** qubit_count
+    flags = jnp.zeros((control_count, qubit_count), dtype=jnp.bool_)
+    for control_idx in range(0, control_count):
+        qubit_idx = control_qubit_list[control_idx]
+        flags = flags.at[control_idx, qubit_idx].set(True)
+    print('single_qubit_flags', flags)
+    
+    hamiltonian = jnp.zeros((control_count, hilbert_size, hilbert_size), dtype=jnp.complex128)
+    for control_idx in range(0, control_count):        
+        matrices = []
+        for qubit_idx in range(0, qubit_count):
+            if flags[control_idx, qubit_idx] == True:
+                matrices.append(sigma)
+            else:
+                matrices.append(jnp.identity(2,dtype=jnp.complex128) )
+        #hamiltonian = hamiltonian + reduce(jnp.kron, matrices)
+        hamiltonian = hamiltonian.at[control_idx].set( reduce(jnp.kron, matrices) )
+        
+    return hamiltonian
+
 def corner_terms_2(length, width, sigma = jnp.array(qt.operators.sigmaz().data.toarray()) ):
     # It works for rectangular lattice only. The number of vertices along the two sides are required.
     # Qubits sit at the vertices.
@@ -231,6 +258,33 @@ def single_qubit_terms_2(length, width, sigma = jnp.array(qt.operators.sigmaz().
             else:
                 matrices.append(jnp.identity(2,dtype=jnp.complex128) )
         hamiltonian = hamiltonian + reduce(jnp.kron, matrices)
+        
+    return hamiltonian
+
+def single_qubit_terms_custom_2(length, width, control_count, control_qubit_list, sigma = jnp.array(qt.operators.sigmaz().data.toarray()) ):
+    # It works for rectangular lattice only. The number of vertices along the two sides are required.
+    # Qubits sit at the vertices.
+    # length is the number of vertices along one side
+    # width is the number of vertices along the other side
+    
+    qubit_count = int( length * width )
+    hilbert_size = 2 ** qubit_count
+    flags = jnp.zeros((control_count, qubit_count), dtype=jnp.bool_)
+    for control_idx in range(0, control_count):
+        qubit_idx = control_qubit_list[control_idx]
+        flags = flags.at[control_idx, qubit_idx].set(True)
+    print('single_qubit_flags', flags)
+    
+    hamiltonian = jnp.zeros((control_count, hilbert_size, hilbert_size), dtype=jnp.complex128)
+    for control_idx in range(0, control_count):        
+        matrices = []
+        for qubit_idx in range(0, qubit_count):
+            if flags[control_idx, qubit_idx] == True:
+                matrices.append(sigma)
+            else:
+                matrices.append(jnp.identity(2,dtype=jnp.complex128) )
+        #hamiltonian = hamiltonian + reduce(jnp.kron, matrices)
+        hamiltonian = hamiltonian.at[control_idx].set( reduce(jnp.kron, matrices) )
         
     return hamiltonian
 
@@ -411,6 +465,35 @@ def single_qubit_terms_3(length, width, sigma = jnp.array(qt.operators.sigmaz().
         
     return hamiltonian
 
+def single_qubit_terms_custom_3(length, width, control_count, control_qubit_list, sigma = jnp.array(qt.operators.sigmaz().data.toarray()) ):
+    # It works for rectangular lattice only. The number of vertices along the two sides are required.
+    # Qubits sit at the vertices.
+    # length is the number of vertices along one side
+    # width is the number of vertices along the other side
+    
+    assert(length % 2 == 0)
+    assert(width % 2 == 0)
+    
+    qubit_count = int( length * width )
+    hilbert_size = 2 ** qubit_count
+    flags = jnp.zeros((control_count, qubit_count), dtype=jnp.bool_)
+    for control_idx in range(0, control_count):
+        qubit_idx = control_qubit_list[control_idx]
+        flags = flags.at[control_idx, qubit_idx].set(True)
+    print('single_qubit_flags', flags)
+    
+    hamiltonian = jnp.zeros((control_count, hilbert_size, hilbert_size), dtype=jnp.complex128)
+    for control_idx in range(0, control_count):        
+        matrices = []
+        for qubit_idx in range(0, qubit_count):
+            if flags[control_idx, qubit_idx] == True:
+                matrices.append(sigma)
+            else:
+                matrices.append(jnp.identity(2,dtype=jnp.complex128) )
+        #hamiltonian = hamiltonian + reduce(jnp.kron, matrices)
+        hamiltonian = hamiltonian.at[control_idx].set( reduce(jnp.kron, matrices) )
+        
+    return hamiltonian
 
 
 
