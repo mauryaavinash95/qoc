@@ -463,6 +463,7 @@ def _evaluate_schroedinger_discrete_unitary_control_list(controls, pstate, repor
              unitaries) = _evolve_step_schroedinger_discrete_unitary_control_list(dt,
                                                         pstate.SYSTEM_HAMILTONIAN,
                                                         pstate.CONTROL,
+                                                        pstate.control_count,
                                                         states,
                                                         #densities,
                                                         unitaries,
@@ -497,6 +498,7 @@ def _evaluate_schroedinger_discrete_unitary_control_list(controls, pstate, repor
 def _evolve_step_schroedinger_discrete_unitary_control_list(dt,
                                        SYSTEM_HAMILTONIAN,
                                        CONTROL,
+                                       control_count,
                                        states,
                                        #densities,
                                        unitaries, time,
@@ -527,17 +529,19 @@ def _evolve_step_schroedinger_discrete_unitary_control_list(dt,
      
     controls_ = controls[index - 1] + (((controls[index] - controls[index - 1]) / (control_eval_times[index] - control_eval_times[index - 1])) * (t1 - control_eval_times[index - 1]))
     
-    hamiltonian_ = (SYSTEM_HAMILTONIAN
-             + controls_[0] * CONTROL[0]
-             + controls_[1] * CONTROL[1] )
-             #+ controls_[2] * CONTROL[2]
-             #+ controls_[3] * CONTROL[3]
-             #+ controls_[4] * CONTROL[4]
-             #+ controls_[5] * CONTROL[5])
+    #hamiltonian_ = jnp.zeros((64, 64), dtype=jnp.complex128)
+    hamiltonian_ = SYSTEM_HAMILTONIAN + controls_[0] * CONTROL[0]
+    for idx in range(1, control_count):
+        hamiltonian_ = hamiltonian_ + controls_[idx] * CONTROL[idx]
+    
     '''
     hamiltonian_ = (SYSTEM_HAMILTONIAN
-             + controls_[0] * CONTROL_0
-             + controls_[1] * CONTROL_1)
+             + controls_[0] * CONTROL[0]
+             + controls_[1] * CONTROL[1]
+             + controls_[2] * CONTROL[2]
+             + controls_[3] * CONTROL[3]
+             + controls_[4] * CONTROL[4]
+             + controls_[5] * CONTROL[5])
     '''
     a1 = -1j * hamiltonian_
     magnus = dt * a1
