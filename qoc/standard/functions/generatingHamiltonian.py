@@ -7,6 +7,22 @@ Created on Mon Aug  1 13:29:23 2022
 """
 
 # This is the code for generating the Hamiltonians of 2D Lattice Gauge Theory.
+# See the following papers for details.
+# (1) Marcos, D., Widmer, P., Rico, E., Hafezi, M., Rabl, P., Wiese, U. J., & Zoller, P. (2014). 
+# Two-dimensional lattice gauge theories with superconducting quantum circuits. 
+# Annals of physics, 351, 634-654.
+# (2) Kairys, P., & Humble, T. S. (2021). 
+# Parametrized Hamiltonian simulation using quantum optimal control. 
+# Physical Review A, 104(4), 042602.
+
+# plaquette_terms: sum of (S_+^(i) S_-^(i+1) S_+^(i+2) S_-^(i+3) ) + (S_-^(i) S_+^(i+1) S_-^(i+2) S_+^(i+3) ) over all plaquettes
+# corner_terms: sum of (S^(i) S^(i+1) ) over all corners
+# single_qubit_terms: sum of S^(i) over all qubits indexed i
+# single_qubit_terms_custom: sum of S^(i) over customized qubits
+
+# The first 4 functions: The lattice is a rectangular defined by length and width, qubits sit on edges
+# The next 4 functions: The lattice is a rectangular defined by length and width, qubits sit on vertices
+# The next 4 functions: The lattice has zigzag boundaries as defined in Fig. 4 of ref (1)
 
 import jax.numpy as jnp
 import numpy as onp
