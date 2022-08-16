@@ -54,6 +54,7 @@ def corner_terms(length, width, sigma = jnp.array(qt.operators.sigmaz().data.toa
         flags = flags.at[corner_idx + 3, first_qubit_idx + length].set(True)
         flags = flags.at[corner_idx + 3, first_qubit_idx + length + (length - 1)].set(True)
         corner_idx += 4
+    print('corner_terms_flags', flags)
     
     assert(corner_idx == corner_count)
     
@@ -88,6 +89,7 @@ def plaquette_terms(length, width,
         flags = flags.at[plaquette_idx, first_qubit_idx + (length - 1)].set(-1)
         flags = flags.at[plaquette_idx, first_qubit_idx + length].set(-1)
         flags = flags.at[plaquette_idx, first_qubit_idx + length + (length - 1)].set(1)
+    print('plaquette_terms_flags', flags)
     
     hamiltonian = jnp.zeros((hilbert_size, hilbert_size), dtype=jnp.complex128)
     for plaquette_idx in range(0, plaquette_count):        
@@ -124,6 +126,7 @@ def single_qubit_terms(length, width, sigma = jnp.array(qt.operators.sigmaz().da
     flags = jnp.zeros((qubit_count, qubit_count), dtype=jnp.bool_)
     for qubit_idx in range(0, qubit_count):
         flags = flags.at[qubit_idx, qubit_idx].set(True)
+    print('single_qubit_flags', flags)
     
     hamiltonian = jnp.zeros((hilbert_size, hilbert_size), dtype=jnp.complex128)
     for qubit_idx in range(0, qubit_count):        
@@ -143,7 +146,7 @@ def single_qubit_terms_custom(length, width, control_count, control_qubit_list, 
     # length is the number of vertices along one side
     # width is the number of vertices along the other side
     
-    qubit_count = int( length * width )
+    qubit_count = int( (length - 1) * width + (width - 1) * length )
     hilbert_size = 2 ** qubit_count
     flags = jnp.zeros((control_count, qubit_count), dtype=jnp.bool_)
     for control_idx in range(0, control_count):
