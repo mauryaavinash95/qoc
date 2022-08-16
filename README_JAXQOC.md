@@ -26,6 +26,9 @@ pip install -e .
 11) Define plotting infidelity vs. iteration in qoc/standard/plot.py
 12) Define hamiltonians with lattice size, qoc/standard/functions/generatingHamiltonian.py
 13) Load all new functions in __init__.py
+14) Mind that now save_intermediate_state actually activates saving intermediate unitaries. It will take much more disk space than saving states
+15) All qoc_HamiltonianSimulation launchers are deprecated. Use qoc_LGT.py instead
+16) All files and functions ending with CONTROL_list are deprecated
 
 ### Parameters for LGT project ###
 1) # 4 qubits:
