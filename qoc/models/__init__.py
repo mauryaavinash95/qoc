@@ -22,7 +22,6 @@ from .schroedingermodels_unitary import (EvolveSchroedingerDiscreteStateUnitary,
                                  EvolveSchroedingerResultUnitary,
                                  GrapeSchroedingerDiscreteStateUnitary,
                                  GrapeSchroedingerResultUnitary,)
-from .schroedingermodels_unitary_CONTROL_list import (GrapeSchroedingerDiscreteStateUnitaryControlList,)
 
 __all__ = [
     "Cost", "Dummy", "InterpolationPolicy",
@@ -42,6 +41,5 @@ __all__ = [
     "EvolveSchroedingerResultUnitary",
     "GrapeSchroedingerDiscreteStateUnitary",
     "GrapeSchroedingerResultUnitary",
-    "GrapeSchroedingerDiscreteStateUnitaryControlList",
 ]
 
