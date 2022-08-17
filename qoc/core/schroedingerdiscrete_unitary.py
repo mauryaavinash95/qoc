@@ -112,7 +112,7 @@ def grape_schroedinger_discrete_unitary(control_count, control_eval_count,
                                 UNITARY_SIZE,
                                 SYSTEM_HAMILTONIAN,
                                 CONTROL,
-                                #initial_states,
+                                initial_states,
                                 #initial_densities,
                                 initial_unitaries,
                                 system_eval_count,
@@ -241,7 +241,7 @@ def grape_schroedinger_discrete_unitary(control_count, control_eval_count,
                                             UNITARY_SIZE,
                                             SYSTEM_HAMILTONIAN,
                                             CONTROL,
-                                            #initial_states,
+                                            initial_states,
                                             #initial_densities,
                                             initial_unitaries,
                                             interpolation_policy,
@@ -347,16 +347,6 @@ def _esdj_wrap(controls, pstate, reporter, result, propagator):
     # Evaluate the jacobian.
     error, grads = (ans_jacobian(propagator, 0)
                           (controls, pstate, reporter))
-    #print('grads:', grads)
-    '''
-    for i in range(1):
-        #i2 = i * 2
-        #color= get_color(i2)
-        grad = grads[:, i]
-        control_eval_times = np.linspace(0, 100, 500)
-        plt.plot(control_eval_times, grad, linestyle = '-',
-                 color='blue', ms=2, alpha=0.9)
-    '''
     # Autograd defines the derivative of a function of complex inputs as
     # df_dz = du_dx - i * du_dy for z = x + iy, f(z) = u(x, y) + iv(x, y).
     # For optimization, we care about df_dz = du_dx + i * du_dy.
@@ -364,17 +354,17 @@ def _esdj_wrap(controls, pstate, reporter, result, propagator):
         grads = jnp.conjugate(grads)
 
     # The states need to be unwrapped from their autograd box.
-    final_unitaries = reporter.final_unitaries
+    final_states = reporter.final_states
 
     # Update best configuration.
     if error < result.best_error:
         result.best_controls = controls
         result.best_error = error
-        result.best_final_unitaries = final_unitaries
+        result.best_final_states = final_states
         result.best_iteration = reporter.iteration
     
     # Save and log optimization progress.
-    pstate.log_and_save(controls, error, final_unitaries,
+    pstate.log_and_save(controls, error, final_states,
                         grads, reporter.iteration)
     reporter.iteration += 1
 
@@ -420,7 +410,7 @@ def _evaluate_schroedinger_discrete_unitary(controls, pstate, reporter):
     else:
         iteration = 0
     save_intermediate_states = pstate.save_intermediate_states_
-    #states = pstate.initial_states
+    states = pstate.initial_states
     #densities = pstate.initial_densities
     unitaries = pstate.initial_unitaries
     step_costs = pstate.step_costs
@@ -458,12 +448,12 @@ def _evaluate_schroedinger_discrete_unitary(controls, pstate, reporter):
         
         # Evolve the states to the next time step.
         if not is_final_system_eval_step:
-            (#states,
+            (states,
              #densities,
              unitaries) = _evolve_step_schroedinger_discrete_unitary(dt,
                                                         pstate.SYSTEM_HAMILTONIAN,
                                                         pstate.CONTROL,
-                                                        #states,
+                                                        states,
                                                         #densities,
                                                         unitaries,
                                                         time,
@@ -489,7 +479,7 @@ def _evaluate_schroedinger_discrete_unitary(controls, pstate, reporter):
 
     # Report results.
     reporter.error = error
-    reporter.final_unitaries = unitaries
+    reporter.final_states = states
     
     return error
 
@@ -497,7 +487,7 @@ def _evaluate_schroedinger_discrete_unitary(controls, pstate, reporter):
 def _evolve_step_schroedinger_discrete_unitary(dt,
                                        SYSTEM_HAMILTONIAN,
                                        CONTROL,
-                                       #states,
+                                       states,
                                        #densities,
                                        unitaries, time,
                                        control_eval_times=None,
@@ -532,11 +522,11 @@ def _evolve_step_schroedinger_discrete_unitary(dt,
     a1 = -1j * hamiltonian_
     magnus = dt * a1
     step_unitary = jax.scipy.linalg.expm(magnus)
-    #states = jnp.matmul(step_unitary, states)
+    states = jnp.matmul(step_unitary, states)
     #densities = jnp.matmul(jnp.matmul(step_unitary, densities), conjugate_transpose(step_unitary))
     unitaries = jnp.matmul(step_unitary, unitaries)
     
-    return (unitaries)   #(states, densities, unitaries)
+    return (states, unitaries)   #(states, densities, unitaries)
 
 def _evaluate_schroedinger_discrete_multilevel_unitary(controls, pstate, reporter):
     """
