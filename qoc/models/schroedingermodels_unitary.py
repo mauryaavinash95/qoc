@@ -190,7 +190,7 @@ class GrapeSchroedingerDiscreteStateUnitary(GrapeState):
                  UNITARY_SIZE,
                  SYSTEM_HAMILTONIAN,
                  CONTROL,
-                 #initial_states,
+                 initial_states,
                  #initial_densities,
                  initial_unitaries,
                  interpolation_policy, iteration_count,
@@ -215,8 +215,8 @@ class GrapeSchroedingerDiscreteStateUnitary(GrapeState):
                          min_error, optimizer,
                          save_file_path, save_iteration_step,
                          system_eval_count,)
-        self.hilbert_size = initial_unitaries[0].shape[0]
-        #self.initial_states = initial_states
+        self.hilbert_size = initial_states[0].shape[0]
+        self.initial_states = initial_states
         #self.initial_densities = initial_densities
         self.initial_unitaries = initial_unitaries
         # added initial_densities, initial_unitaries
@@ -231,7 +231,7 @@ class GrapeSchroedingerDiscreteStateUnitary(GrapeState):
         self.checkpoint_interval = checkpoint_interval
         #print(self.should_save)
 
-    def log_and_save(self, controls, error, final_unitaries, grads, iteration,):
+    def log_and_save(self, controls, error, final_states, grads, iteration,):
         """
         If necessary, log to stdout and save to the save file.
 
@@ -272,7 +272,7 @@ class GrapeSchroedingerDiscreteStateUnitary(GrapeState):
                         save_file["controls"][save_step,] = controls
                         #print('controls', controls)
                         save_file["error"][save_step,] = error
-                        save_file["final_unitaries"][save_step,] = final_unitaries.val
+                        save_file["final_states"][save_step,] = final_states.val
                         save_file["grads"][save_step,] = grads
                     #ENDWITH
                 #ENDWITH
@@ -292,7 +292,7 @@ class GrapeSchroedingerDiscreteStateUnitary(GrapeState):
 
             save_count, save_count_remainder = jnp.divmod(self.iteration_count,
                                                          self.save_iteration_step)
-            state_count = len(self.initial_unitaries)
+            state_count = len(self.initial_states)
             # If the final iteration doesn't fall on a save step, add a save step.
             if save_count_remainder != 0:
                 save_count += 1
@@ -312,17 +312,17 @@ class GrapeSchroedingerDiscreteStateUnitary(GrapeState):
                                                             for cost in self.costs])
                         save_file["error"] = jnp.repeat(jnp.finfo(jnp.float64).max, save_count)
                         save_file["evolution_time"]= self.evolution_time
-                        save_file["final_unitaries"] = jnp.zeros((save_count, state_count,
-                                                              self.hilbert_size, self.hilbert_size),
+                        save_file["final_states"] = jnp.zeros((save_count, state_count,
+                                                              self.hilbert_size, 1),
                                                              dtype=jnp.complex128)
                         save_file["grads"] = jnp.zeros((save_count, self.control_eval_count,
                                                        self.control_count), dtype=self.initial_controls.dtype)
                         save_file["initial_controls"] = self.initial_controls
-                        #save_file["initial_states"] = self.initial_states
+                        save_file["initial_states"] = self.initial_states
                         if self.save_intermediate_states_:
-                            save_file["intermediate_unitaries"] = jnp.zeros((save_count,
+                            save_file["intermediate_states"] = jnp.zeros((save_count,
                                                                          self.system_eval_count,
-                                                                         *self.initial_unitaries.shape),
+                                                                         *self.initial_states.shape),
                                                                         dtype=jnp.complex128)
                         save_file["interpolation_policy"] = "{}".format(self.interpolation_policy)
                         save_file["iteration_count"] = self.iteration_count
@@ -345,7 +345,7 @@ class GrapeSchroedingerDiscreteStateUnitary(GrapeState):
 
     
     def save_intermediate_states(self, iteration,
-                                 unitaries, system_eval_step,):
+                                 states, system_eval_step,):
         """
         Save intermediate states to the save file.
         """
@@ -363,7 +363,7 @@ class GrapeSchroedingerDiscreteStateUnitary(GrapeState):
             try:
                 with FileLock(self.save_file_lock_path):
                     with h5py.File(self.save_file_path, "a") as save_file:
-                        save_file["intermediate_unitaries"][save_step, system_eval_step, :, :, :] = unitaries.astype(jnp.complex128)
+                        save_file["intermediate_states"][save_step, system_eval_step, :, :, :] = states.astype(jnp.complex128)
             except Timeout:
                 print("Timeout while locking {}, could not save intermediate states on iteration {} and "
                       "system_eval_step {}."
@@ -385,7 +385,7 @@ class GrapeSchroedingerResultUnitary(object):
     """
     def __init__(self, best_controls=None,
                  best_error=jnp.finfo(jnp.float64).max,
-                 best_final_unitaries=None,
+                 best_final_states=None,
                  best_iteration=None,):
         """
         See class fields for arguments not listed here.
@@ -393,5 +393,5 @@ class GrapeSchroedingerResultUnitary(object):
         super().__init__()
         self.best_controls = best_controls
         self.best_error = best_error
-        self.best_final_unitaries = best_final_unitaries
+        self.best_final_states = best_final_states
         self.best_iteration = best_iteration
