@@ -26,33 +26,8 @@ pip install -e .
 11) Define plotting infidelity vs. iteration in qoc/standard/plot.py
 12) Define hamiltonians with lattice size, qoc/standard/functions/generatingHamiltonian.py
 13) Load all new functions in __init__.py
-
-### Parameters for LGT project ###
-1) # 4 qubits:
-   DEVICE_HAMILTONIAN = ( 0.5 * single_qubit_terms_2(2, 2, sigma = np.array(qt.operators.sigmaz().data.toarray()) )  
-                   + 0.25 * corner_terms_2(2, 2, sigma = np.array(qt.operators.sigmax().data.toarray()) )
-                   + 0.25 * corner_terms_2(2, 2, sigma = np.array(qt.operators.sigmay().data.toarray()) )  )
-   # Control all the 4 qubits:
-   CONTROL = 0.5 * single_qubit_terms_custom_2(2, 2, 4, [0, 1, 2, 3, ], sigma = np.array(qt.operators.sigmax().data.toarray()) )
-   coupling_J = 1.0 
-   coupling_V = 1.0
-   MODEL_HAMILTONIAN = - coupling_J * plaquette_terms_2(2, 2 ) + coupling_V * corner_terms_2(2, 2, sigma = np.array(qt.operators.sigmaz().data.toarray()) )
-   Time_system = 0.01 #ns
-   TARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)], dtype=np.complex128)
-   # There are 4 qubits, 4 controls, so:
-   QUBIT_COUNT = 4
-   CONTROL_COUNT = 4
-   def hamiltonian(controls, time):
-       return (DEVICE_HAMILTONIAN
-            + controls[0] * CONTROL[0]
-            + controls[1] * CONTROL[1]
-            + controls[2] * CONTROL[2]
-            + controls[3] * CONTROL[3] )
-   # EVOLUTION_TIME = 100 ns suffices:
-   CONTROL_EVAL_COUNT = int(500)
-   EVOLUTION_TIME = 100
-
-2) # 6 qubits:
+14) All qoc_HamiltonianSimulation launchers are deprecated. Use qoc_LGT.py instead
+15) All files and functions ending with CONTROL_list are deprecated
    
 ### Contact ###
 [Xian Wang](mailto:xwang056@ucr.edu) or (mailto:wangthehero@gmail.com)
