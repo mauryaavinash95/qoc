@@ -44,7 +44,7 @@ import matplotlib
 # Define the size of the system.
 argv = sys.argv[1:]
 QUBIT_COUNT = 6    #4
-CONTROL_EVAL_COUNT = int(3000)
+CONTROL_EVAL_COUNT = int(1000)
 USE_CUSTOM_INNER = -1
 CHECKPOINT_INTERVAL = 10
 try:
@@ -119,7 +119,7 @@ DEVICE_HAMILTONIAN = ( 0.5 * single_qubit_terms_2(LENGTH, WIDTH, sigma = np.arra
                    + 0.25 * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmax().data.toarray()) )
                    + 0.25 * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmay().data.toarray()) )  )
 
-CONTROL = 0.5 * single_qubit_terms_custom_2(LENGTH, WIDTH, CONTROL_COUNT, [0, 1, 2, 3, 4, 5], sigma = np.array(qt.operators.sigmax().data.toarray()) )
+CONTROL = 0.5 * single_qubit_terms_custom_2(LENGTH, WIDTH, CONTROL_COUNT, [0, 1, 2, 3, 4, 5, ], sigma = np.array(qt.operators.sigmax().data.toarray()) )
 
 def hamiltonian(controls, time):
     return (DEVICE_HAMILTONIAN + np.multiply( controls[:, np.newaxis, np.newaxis], CONTROL ).sum(0) )
@@ -133,15 +133,15 @@ def hamiltonian(controls, time):
 # makes a difference.
 
 initial0 = jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128)
-#INITIAL_STATES = np.zeros((HILBERT_SIZE, 1), dtype=np.float64)
-#INITIAL_STATES = np.array([INITIAL_STATES], dtype=np.float64)
-#INITIAL_STATES = INITIAL_STATES.at[0, 0, 0].set(1.0)
+INITIAL_STATES = np.zeros((HILBERT_SIZE, 1), dtype=np.float64)
+INITIAL_STATES = np.array([INITIAL_STATES], dtype=np.float64)
+INITIAL_STATES = INITIAL_STATES.at[0, 0, 0].set(1.0)
 #density0 = np.matmul(INITIAL_STATES, conjugate_transpose(INITIAL_STATES))
 #INITIAL_DENSITIES = np.stack((density0,), axis=0)[0]
 unitary0 = np.matmul(initial0, conjugate_transpose(initial0))
 INITIAL_UNITARIES = np.stack((unitary0,), axis=0)    #[0]
 
-#print("INITIAL_STATES",INITIAL_STATES)
+print("INITIAL_STATES",INITIAL_STATES)
 #print("INITIAL_DENSITIES",INITIAL_DENSITIES)
 print("INITIAL_UNITARIES",INITIAL_UNITARIES)
 
@@ -170,7 +170,7 @@ SAVE_ITERATION_STEP = 1  #0
 # answer very quickly.
 #OPTIMIZER = LBFGSB()
 OPTIMIZER = Adam()
-ITERATION_COUNT = 1000
+ITERATION_COUNT = 5
 # In practice, we find that using a second-order optimizer, such as LBFGSB,
 # gives a good initial answer. Then, this answer may be used with a first-
 # order optimizer, such as Adam, to achieve the desired error.
@@ -212,7 +212,7 @@ print("TARGET_UNITARIES",TARGET_UNITARIES)
 print("COSTS",COSTS)
 
 # qoc saves data in h5 format. You can parse h5 files using the `h5py` package [5].
-EXPERIMENT_NAME = "LGT_lattice2_cornerZ_and_plaqS_2by3_ctrlall6_3000pts_500ns_1000iter"
+EXPERIMENT_NAME = "LGT_lattice1_cornerZ_and_plaqS_2by3_ctrlall6_1000pts_500ns_5iter"
 SAVE_PATH = "./out"
 H_SIMULATION_FILE_PATH = generate_save_file_path(EXPERIMENT_NAME, SAVE_PATH)
 
@@ -230,7 +230,7 @@ for i in range(rep_count):
                                      HILBERT_SIZE,
                                      DEVICE_HAMILTONIAN,
                                      CONTROL,
-                                     #INITIAL_STATES,
+                                     INITIAL_STATES,
                                      #INITIAL_DENSITIES,
                                      INITIAL_UNITARIES,
                                      SYSTEM_EVAL_COUNT,
