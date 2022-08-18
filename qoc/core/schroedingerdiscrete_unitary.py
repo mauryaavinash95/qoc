@@ -581,8 +581,7 @@ def _evaluate_schroedinger_discrete_multilevel_unitary(controls, pstate, reporte
      #densities,
      unitaries) = step_propagator(dt,
            pstate.SYSTEM_HAMILTONIAN,
-           pstate.CONTROL_0, pstate.CONTROL_1,
-           pstate.CONTROL_2, pstate.CONTROL_3,
+           pstate.CONTROL,
            states,
            #densities,
            unitaries,
@@ -639,7 +638,7 @@ def _evaluate_schroedinger_discrete_multilevel_unitary(controls, pstate, reporte
     reporter.final_states = states
     
     return error
-'''
+
 def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_eval_step,
                                          dt, pstate,
                                          states,
@@ -649,10 +648,7 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
                                          
     UNITARY_SIZE = pstate.UNITARY_SIZE
     SYSTEM_HAMILTONIAN = pstate.SYSTEM_HAMILTONIAN
-    CONTROL_0 = pstate.CONTROL_0
-    CONTROL_1 = pstate.CONTROL_1
-    CONTROL_2 = pstate.CONTROL_2
-    CONTROL_3 = pstate.CONTROL_3
+    CONTROL = pstate.CONTROL
     unitaries_store=None
     magnus_store=None
     index_store=None
@@ -686,8 +682,7 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
              #densities,
              unitaries)  = _evolve_step_schroedinger_discrete_unitary(dt,
                                                                   SYSTEM_HAMILTONIAN,
-                                                                  CONTROL_0, CONTROL_1,
-                                                                  CONTROL_2, CONTROL_3,
+                                                                  CONTROL,
                                                                   states,
                                                                   #densities,
                                                                   unitaries,
@@ -753,11 +748,7 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
             index = jnp.argmax(t1 <= control_eval_times)
             index_store = index_store.at[i-start].set(index)
             controls_ = controls[index - 1] + (((controls[index] - controls[index - 1]) / (control_eval_times[index] - control_eval_times[index - 1])) * (t1 - control_eval_times[index - 1]))
-            hamiltonian_ = (SYSTEM_HAMILTONIAN
-                     + controls_[0] * CONTROL_0
-                     + controls_[1] * CONTROL_1
-                     + controls_[2] * CONTROL_2
-                     + controls_[3] * CONTROL_3)
+            hamiltonian_ = SYSTEM_HAMILTONIAN + jnp.multiply( controls_[:, jnp.newaxis, jnp.newaxis], CONTROL ).sum(0)
             a1 = -1j * hamiltonian_
             magnus = dt * a1
             magnus_store = magnus_store.at[i-start].set(magnus)
@@ -849,11 +840,7 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
             y = ys[index - 1] + (((ys[index] - ys[index - 1]) / (xs[index] - xs[index - 1])) * (x - xs[index - 1]))
             controls_ = y
 
-            hamiltonian_ = (SYSTEM_HAMILTONIAN
-                     + controls_[0] * CONTROL_0
-                     + controls_[1] * CONTROL_1
-                     + controls_[2] * CONTROL_2
-                     + controls_[3] * CONTROL_3)
+            hamiltonian_ = SYSTEM_HAMILTONIAN + jnp.multiply( controls_[:, jnp.newaxis, jnp.newaxis], CONTROL ).sum(0)
             a1 = -1j * hamiltonian_
             magnus = dt * a1
             step_unitary, f_expm_grad = jax.vjp(jax.scipy.linalg.expm, (magnus), has_aux=False)
@@ -919,11 +906,7 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
         t1 = time + dt * 0.5
         index = jnp.argmax(t1 <= control_eval_times)
         controls_ = controls[index - 1] + (((controls[index] - controls[index - 1]) / (control_eval_times[index] - control_eval_times[index - 1])) * (t1 - control_eval_times[index - 1]))
-        hamiltonian_ = (SYSTEM_HAMILTONIAN
-                 + controls_[0] * CONTROL_0
-                 + controls_[1] * CONTROL_1
-                 + controls_[2] * CONTROL_2
-                 + controls_[3] * CONTROL_3)
+        hamiltonian_ = SYSTEM_HAMILTONIAN + jnp.multiply( controls_[:, jnp.newaxis, jnp.newaxis], CONTROL ).sum(0)
         a1 = -1j * hamiltonian_
         magnus = dt * a1
         step_unitary, f_expm_grad = jax.vjp(jax.scipy.linalg.expm, (magnus), has_aux=False)
@@ -989,4 +972,4 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
                                     states, unitaries, control_eval_times,controls)
     
     return states, unitaries
-'''
+
