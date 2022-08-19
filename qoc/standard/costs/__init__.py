@@ -12,6 +12,8 @@ from .targetdensityinfidelity import TargetDensityInfidelity
 from .targetdensityinfidelitytime import TargetDensityInfidelityTime
 from .targetstateinfidelity import TargetStateInfidelity
 from .targetstateinfidelitytime import TargetStateInfidelityTime
+from .targetunitaryinfidelity import TargetUnitaryInfidelity
+from .targetunitaryinfidelitytime import TargetUnitaryInfidelityTime
 
 __all__ = [
     "ControlArea", "ControlBandwidthMax",
@@ -19,4 +21,5 @@ __all__ = [
     "ForbidDensities", "ForbidStates",
     "TargetDensityInfidelity", "TargetDensityInfidelityTime",
     "TargetStateInfidelity", "TargetStateInfidelityTime",
+    "TargetUnitaryInfidelity", "TargetUnitaryInfidelityTime",
 ]

@@ -15,7 +15,7 @@ import h5py
 from qoc.models.programtype import ProgramType
 from qoc.models.programstate import (ProgramState, GrapeState,)
 
-class EvolveSchroedingerDiscreteState(ProgramState):
+class EvolveSchroedingerDiscreteStateUnitary(ProgramState):
     """
     This class encapsulates data fields that are used by the
     qoc.core.schroedingerdiscrete.evolve_schroedinger_discrete
@@ -106,6 +106,7 @@ class EvolveSchroedingerDiscreteState(ProgramState):
             try:
                 with FileLock(self.save_file_lock_path):
                     with h5py.File(self.save_file_path, "a") as save_file:
+                        #save_file["intermediate_states"][system_eval_step, :, :, :] = states.astype(np.complex128)
                         save_file["intermediate_states"][system_eval_step, :, :, :] = states.astype(jnp.complex128)
             except Timeout:
                 print("Timeout while locking {} while saving intermediate states on iteration {}."
@@ -113,7 +114,7 @@ class EvolveSchroedingerDiscreteState(ProgramState):
         #ENDIF
 
 
-class EvolveSchroedingerResult(object):
+class EvolveSchroedingerResultUnitary(object):
     """
     This class encapsulates the result of the
     qoc.core.schroedingerdiscrete.evolve_schroedinger_discrete
@@ -134,7 +135,7 @@ class EvolveSchroedingerResult(object):
         self.final_states = final_states
 
 
-class GrapeSchroedingerDiscreteState(GrapeState):
+class GrapeSchroedingerDiscreteStateUnitary(GrapeState):
     """
     This class encapsulates the data fields used by the
     qoc.core.schroedingerdiscrete.grap_schroedinger_discrete
@@ -188,9 +189,11 @@ class GrapeSchroedingerDiscreteState(GrapeState):
                  initial_controls,
                  UNITARY_SIZE,
                  SYSTEM_HAMILTONIAN,
-                 CONTROL_0, CONTROL_0_DAGGER,
-                 CONTROL_1, CONTROL_1_DAGGER,
-                 initial_states, initial_densities, interpolation_policy, iteration_count,
+                 CONTROL,
+                 initial_states,
+                 #initial_densities,
+                 initial_unitaries,
+                 interpolation_policy, iteration_count,
                  log_iteration_step, max_control_norms,
                  magnus_policy, min_error, optimizer,
                  save_file_path, save_intermediate_states_,
@@ -214,20 +217,19 @@ class GrapeSchroedingerDiscreteState(GrapeState):
                          system_eval_count,)
         self.hilbert_size = initial_states[0].shape[0]
         self.initial_states = initial_states
+        #self.initial_densities = initial_densities
+        self.initial_unitaries = initial_unitaries
+        # added initial_densities, initial_unitaries
         self.magnus_policy = magnus_policy
         self.save_intermediate_states_ = (self.should_save
                                           and save_intermediate_states_)
         self.UNITARY_SIZE = UNITARY_SIZE
         self.SYSTEM_HAMILTONIAN = SYSTEM_HAMILTONIAN
-        self.CONTROL_0 = CONTROL_0
-        self.CONTROL_0_DAGGER = CONTROL_0_DAGGER
-        self.CONTROL_1 = CONTROL_1
-        self.CONTROL_1_DAGGER = CONTROL_1_DAGGER
+        self.CONTROL = CONTROL
         self.use_custom_inner = use_custom_inner
         self.use_custom_step = use_custom_step
         self.checkpoint_interval = checkpoint_interval
-        self.initial_densities = initial_densities
-
+        #print(self.should_save)
 
     def log_and_save(self, controls, error, final_states, grads, iteration,):
         """
@@ -268,6 +270,7 @@ class GrapeSchroedingerDiscreteState(GrapeState):
                 with FileLock(self.save_file_lock_path):
                     with h5py.File(self.save_file_path, "a") as save_file:
                         save_file["controls"][save_step,] = controls
+                        #print('controls', controls)
                         save_file["error"][save_step,] = error
                         save_file["final_states"][save_step,] = final_states.val
                         save_file["grads"][save_step,] = grads
@@ -297,6 +300,7 @@ class GrapeSchroedingerDiscreteState(GrapeState):
             try:
                 with FileLock(self.save_file_lock_path):
                     with h5py.File(self.save_file_path, "w") as save_file:
+                        
                         save_file["complex_controls"] = self.complex_controls
                         save_file["control_count"] = self.control_count
                         save_file["control_eval_count"] = self.control_eval_count
@@ -367,7 +371,7 @@ class GrapeSchroedingerDiscreteState(GrapeState):
         #ENDIF
 
 
-class GrapeSchroedingerResult(object):
+class GrapeSchroedingerResultUnitary(object):
     """
     This class encapsulates the result of the
     qoc.core.lindbladdiscrete.grape_schroedinger_discrete

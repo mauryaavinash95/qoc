@@ -33,7 +33,8 @@ COLOR_PALETTE_LEN = len(COLOR_PALETTE)
 
 ### MAIN METHODS ###
 
-def plot_controls(file_path, amplitude_unit="GHz", 
+def plot_controls(file_path, amplitude_unit="a.u.", 
+                  frequency_unit="GHz", 
                   dpi=1000,
                   marker_style="o", save_file_path=None,
                   save_index=None,
@@ -71,13 +72,16 @@ def plot_controls(file_path, amplitude_unit="GHz",
                 if save_index is None:
                     save_index = np.argmin(file_["error"])
                 complex_controls = file_["complex_controls"][()]
+                #print("complex_controls", complex_controls)
                 controls = file_["controls"][save_index][()]
                 evolution_time = file_["evolution_time"][()]
+                #error_list = file_["error"][()]
     except Timeout:
         print("Could not access specified file.")
         return
     #ENDWITH
     control_count = controls.shape[1]
+    #print('control_count', control_count)
     control_eval_count = controls.shape[0]
     control_eval_times = np.linspace(0, evolution_time, control_eval_count)
     control_dt = control_eval_times[1] - control_eval_times[0]
@@ -91,16 +95,23 @@ def plot_controls(file_path, amplitude_unit="GHz",
     patches = list()
     labels = list()
     for i in range(control_count):
-        i2 = i * 2
-        label_real = "control_{}_real".format(i)
-        labels.append(label_real)
-        color_real = get_color(i2)
-        patches.append(mpatches.Patch(label=label_real, color=color_real))
-
-        label_imag = "control_{}_imag".format(i)
-        color_imag = get_color(i2 + 1)
-        labels.append(label_imag)
-        patches.append(mpatches.Patch(label=label_imag, color=color_imag))
+        if complex_controls:
+            i2 = i * 2
+            label_real = "control_{}_real".format(i)
+            labels.append(label_real)
+            color_real = get_color(i2)
+            patches.append(mpatches.Patch(label=label_real, color=color_real))
+    
+            label_imag = "control_{}_imag".format(i)
+            color_imag = get_color(i2 + 1)
+            labels.append(label_imag)
+            patches.append(mpatches.Patch(label=label_imag, color=color_imag))
+        else:
+            i2 = i * 2
+            label_real = "control_{}".format(i)
+            labels.append(label_real)
+            color_real = get_color(i2)
+            patches.append(mpatches.Patch(label=label_real, color=color_real))
     #ENDFOR
 
     # Set up the plots.
@@ -121,17 +132,28 @@ def plot_controls(file_path, amplitude_unit="GHz",
             color_imag = get_color(i2 + 1)
             control_real = controls_real[:, i]
             control_imag = controls_imag[:, i]
+            '''
             plt.plot(control_eval_times, control_real, marker_style,
                      color=color_real, ms=2, alpha=0.9)
             plt.plot(control_eval_times, control_imag, marker_style,
+                     color=color_imag, ms=2, alpha=0.9)
+            '''
+            plt.plot(control_eval_times, control_real, linestyle = '-',
+                     color=color_real, ms=2, alpha=0.9)
+            plt.plot(control_eval_times, control_imag, linestyle = '-',
                      color=color_imag, ms=2, alpha=0.9)
     else:
         for i in range(control_count):
             i2 = i * 2
             color= get_color(i2)
             control = controls[:, i]
+            '''
             plt.plot(control_eval_times, control, marker_style,
                      color=color, ms=2, alpha=0.9)
+            '''
+            plt.plot(control_eval_times, control, linestyle = '-',
+                     color=color, ms=2, alpha=0.9)
+            #print('control {} is:\n {}'.format(i, control) )
     #ENDIF
 
     # Plot the fft.
@@ -152,8 +174,16 @@ def plot_controls(file_path, amplitude_unit="GHz",
             ax.plot(freq_axis,
                     control_fft_squared_imag, marker_style, color=color_fft_imag,
                     ms=2,alpha=0.9)
+    else:
+        for i in range(control_count):
+            i2 = i * 2 
+            color_fft_real = get_color(i2)
+            control_fft_abs = np.abs(np.fft.fft(controls[:, i]))            
+            ax.plot(freq_axis,
+                    control_fft_abs, linestyle = '-', color=color_fft_real,
+                    ms=2,alpha=0.9)
     #ENDFOR
-    ax.set_xlabel("Frequency ({})".format(amplitude_unit))
+    ax.set_xlabel("Frequency ({})".format(frequency_unit))
     ax.set_ylabel("FFT")
     
     freq_index_max = np.argmax(freq_axis)
@@ -165,8 +195,8 @@ def plot_controls(file_path, amplitude_unit="GHz",
     
     if fft_tick_count is not None:
         ticks = np.linspace(fft_freq_lo, fft_freq_hi, fft_tick_count)
-        ax.set_xticks(ticks)
-
+        ax.set_xticks(ticks)    
+    
     # Export.
     if save_file_path is not None:
         plt.savefig(save_file_path, dpi=dpi)
@@ -174,12 +204,83 @@ def plot_controls(file_path, amplitude_unit="GHz",
     if show:
         plt.show()
 
+def plot_error(file_path, 
+                  dpi=1000,
+                  marker_style="o", save_file_path=None,
+                  save_index=None,
+                  show=False,
+                  title=None,):
+    """
+    Plot the controls,  and their discrete fast fourier transform.
 
+    Arguments:
+    file_path
+    
+    dpi
+    marker_style
+    save_file_path
+    save_index
+    show
+
+    Returns: None
+    """
+    # Open the file; extract data.
+    file_lock_path = "{}.lock".format(file_path)
+    try:
+        with FileLock(file_lock_path):
+            with h5py.File(file_path, "r") as file_:
+                error = file_["error"][()]
+                #grads = file_["grads"][()]
+    except Timeout:
+        print("Could not access specified file.")
+        return
+    #ENDWITH
+    
+    file_name = os.path.splitext(ntpath.basename(file_path))[0]
+    if title is None:
+        title = file_name
+    
+    #grads = grads[error < 1.01] 
+    error = error[error < 1.01]       
+    iter_ = np.arange(len(error), dtype=np.int)
+    
+    plt.figure()
+    plt.suptitle(title)
+    '''
+    plt.figlegend(handles=patches, labels=labels, loc="upper right",
+                  framealpha=0.5)
+    plt.subplots_adjust(hspace=0.8)
+    '''
+    # Plot the error.
+    #plt.subplot(2, 1, 1)
+    ax1 = plt.subplot(1, 1, 1)
+    ax1.set_xlabel("Iteration")
+    ax1.set_ylabel("Infidelity")
+    ax1.set_ybound(lower=0.0, upper=1.0)
+    ax1.plot(iter_, error, marker_style,
+             color='blue', ms=2, alpha=0.9)
+    '''
+    ax2 = plt.subplot(2, 1, 2)
+    ax2.set_xlabel("Iteration")
+    ax2.set_ylabel("Grads_l2")
+    ax2.set_ybound(lower=0.0, )
+    ax2.plot(iter_, grads, marker_style,
+             color='blue', ms=2, alpha=0.9)
+    '''
+    #print(iter_)
+    #print(error_list)
+    # Export.
+    if save_file_path is not None:
+        plt.savefig(save_file_path, dpi=dpi)
+        
+    if show:
+        plt.show()
+    
 def plot_density_population(file_path,
                             density_index=0,
                             dpi=1000,
                             marker_style="o",
-                            save_file_path=None,
+                             save_file_path=None,
                             save_index=None,
                             show=False,
                             time_unit="ns",
