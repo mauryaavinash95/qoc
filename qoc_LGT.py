@@ -148,17 +148,11 @@ def hamiltonian(controls, time):
 # makes a difference.
 
 initial0 = jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128)
-INITIAL_STATES = np.zeros((HILBERT_SIZE, 1), dtype=np.float64)
-INITIAL_STATES = np.array([INITIAL_STATES], dtype=np.float64)
-INITIAL_STATES = INITIAL_STATES.at[0, 0, 0].set(1.0)
-#density0 = np.matmul(INITIAL_STATES, conjugate_transpose(INITIAL_STATES))
-#INITIAL_DENSITIES = np.stack((density0,), axis=0)[0]
+INITIAL_STATES = np.zeros((HILBERT_SIZE, 1), dtype=np.complex128)
+INITIAL_STATES = np.array([INITIAL_STATES], dtype=np.complex128)
 unitary0 = np.matmul(initial0, conjugate_transpose(initial0))
-INITIAL_UNITARIES = np.stack((unitary0,), axis=0)    #[0]
+INITIAL_UNITARIES = np.stack((unitary0,), axis=0) 
 
-print("INITIAL_STATES",INITIAL_STATES)
-#print("INITIAL_DENSITIES",INITIAL_DENSITIES)
-print("INITIAL_UNITARIES",INITIAL_UNITARIES)
 
 coupling_J = 1.0 
 coupling_V = 1.0
@@ -219,8 +213,10 @@ print("CONTROL_EVAL_TIMES:\n{}"
 print("SYSTEM_EVAL_TIMES:\n{}"
       "".format(np.linspace(0, EVOLUTION_TIME, SYSTEM_EVAL_COUNT)))
 '''
+print("INITIAL_STATES",INITIAL_STATES)
+print("TARGET_STATES",TARGET_STATES)
+print("INITIAL_UNITARIES",INITIAL_UNITARIES)
 print("TARGET_UNITARIES",TARGET_UNITARIES)
-#print("TARGET_STATES",TARGET_STATES)
 print("COSTS",COSTS)
 
 # qoc saves data in h5 format. You can parse h5 files using the `h5py` package [5].
