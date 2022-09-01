@@ -857,6 +857,83 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
     _evaluate_schroedinger_discrete_loop_inner_custom_inv_unitary.defvjp(_evaluate_schroedinger_discrete_loop_inner_custom_inv_fwd_unitary, _evaluate_schroedinger_discrete_loop_inner_custom_inv_bwd_unitary)
 
     @jax.custom_vjp
+    def _evaluate_schroedinger_discrete_loop_inner_custom_inv_jax_unitary(start, stop,cost_eval_step,
+                                             dt,
+                                             states,
+                                             unitaries,
+                                             control_eval_times,controls):
+        (states,
+         unitaries) = _evaluate_schroedinger_discrete_loop_inner_unitary(start, stop,cost_eval_step,
+                                             dt,
+                                             states,
+                                             unitaries,
+                                             control_eval_times,controls)
+        return states, unitaries 
+
+    #@jax.profiler.trace_function
+    def _evaluate_schroedinger_discrete_loop_inner_custom_inv_jax_fwd_unitary(start, stop,cost_eval_step,
+                                             dt,
+                                             states,
+                                             unitaries,
+                                             control_eval_times,controls):
+        (states,
+         unitaries) =_evaluate_schroedinger_discrete_loop_inner_unitary(start, stop,cost_eval_step,
+                                             dt,
+                                             states,
+                                             unitaries,
+                                             control_eval_times,controls)
+        #Here we store the final state for use in the backward pass
+        return (states, unitaries), (start, stop,cost_eval_step,
+                                             dt,
+                                             states, unitaries,
+                                             control_eval_times,controls)
+    
+    def _evaluate_schroedinger_discrete_loop_inner_custom_inv_jax_bwd_unitary(res,g_prod):
+        start, stop, cost_eval_step, dt, states, unitaries, control_eval_times, controls = res
+        #Go forward in timesteps storing the controls only
+        _M2_C1 = 0.5
+        controlsb = jnp.zeros(controls.shape, controls.dtype)
+        #Go backwards in timesteps
+        statesb = g_prod[0]
+        unitariesb = g_prod[1]
+        for i in range(stop-1,start-1,-1):
+            #Reapply controls to compute a step unitary matrix
+            time = i * dt
+            t1 = time + dt * _M2_C1
+            x = t1
+            xs = control_eval_times
+            ys = controls
+            index = jnp.argmax(x <= xs)
+            y = ys[index - 1] + (((ys[index] - ys[index - 1]) / (xs[index] - xs[index - 1])) * (x - xs[index - 1]))
+            controls_ = y
+
+            hamiltonian_ = SYSTEM_HAMILTONIAN + jnp.multiply( controls_[:, jnp.newaxis, jnp.newaxis], CONTROL ).sum(0)
+            a1 = -1j * hamiltonian_
+            magnus = dt * a1
+            step_unitary, f_expm_grad = jax.vjp(jax.scipy.linalg.expm, (magnus), has_aux=False)
+            #Exploit invertibility of unitary matrix and calculate previous sta
+            step_unitary_inv = jnp.conj(jnp.transpose(step_unitary))
+            states = (jnp.matmul(step_unitary_inv, states))
+            unitaries = (jnp.matmul(step_unitary_inv, unitaries))
+            _, f_evolve_step_schroedinger_discrete_unitary = jax.vjp(
+                                       _evolve_step_schroedinger_discrete_unitary, 
+                                       dt,
+                                       SYSTEM_HAMILTONIAN,
+                                       CONTROL,
+                                       states,
+                                       unitaries, 
+                                       time,
+                                       control_eval_times,
+                                       controls) 
+            g_prod = f_evolve_step_schroedinger_discrete_unitary((statesb, unitariesb))
+            statesb = g_prod[3]
+            unitariesb = g_prod[4]
+            controlsb = controlsb + g_prod[7]
+        return (0.0, 0.0, 0.0, 0.0, statesb, unitariesb, 0.0, controlsb)
+
+    _evaluate_schroedinger_discrete_loop_inner_custom_inv_jax_unitary.defvjp(_evaluate_schroedinger_discrete_loop_inner_custom_inv_jax_fwd_unitary, _evaluate_schroedinger_discrete_loop_inner_custom_inv_jax_bwd_unitary)
+
+    @jax.custom_vjp
     def _evolve_step_schroedinger_discrete_custom_unitary(dt,
                                            states, unitaries, time,
                                            control_eval_times,
@@ -938,6 +1015,8 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
           inner_propagator = _evaluate_schroedinger_discrete_loop_inner_custom_inv_unitary
       if pstate.use_custom_inner==5:
           inner_propagator = _evaluate_schroedinger_discrete_loop_inner_unitary
+      if pstate.use_custom_inner==6:
+          inner_propagator = _evaluate_schroedinger_discrete_loop_inner_custom_inv_jax_unitary
       # Evolve the states to `evolution_time`.
       # Compute step-costs along the way.
       valslen=math.ceil(len(range(1,system_eval_count-1))/checkpoint_interval)
