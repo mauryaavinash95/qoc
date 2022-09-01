@@ -231,7 +231,7 @@ def grape_schroedinger_discrete_unitary(control_count, control_eval_count,
                                                               evolution_time,
                                                               initial_controls,
                                                               max_control_norms)
-        
+
     # Construct the program state.
     pstate = GrapeSchroedingerDiscreteStateUnitary(complex_controls, control_count,
                                             control_eval_count, cost_eval_step,
@@ -414,7 +414,6 @@ def _evaluate_schroedinger_discrete_unitary(controls, pstate, reporter):
     #densities = pstate.initial_densities
     unitaries = pstate.initial_unitaries
     step_costs = pstate.step_costs
-    #print('step_costs',step_costs)
     system_eval_count = pstate.system_eval_count
     error = 0
 
@@ -440,7 +439,6 @@ def _evaluate_schroedinger_discrete_unitary(controls, pstate, reporter):
         # Compute step costs every `cost_step`.
         if is_cost_step and not is_first_system_eval_step:
             for i, step_cost in enumerate(step_costs):
-                print('step_cost is unitary')
                 #cost_error = step_cost.cost(controls, states, system_eval_step)
                 cost_error = step_cost.cost(controls, unitaries, system_eval_step)
                 error = error + cost_error
@@ -464,15 +462,11 @@ def _evaluate_schroedinger_discrete_unitary(controls, pstate, reporter):
     # Compute non-step-costs.
     for i, cost in enumerate(costs):
         if not cost.requires_step_evaluation:
-            #print(cost)
             if isinstance(cost, TargetDensityInfidelity):
-                #print('cost is density')
                 cost_error = cost.cost(controls, densities, final_system_eval_step)
             elif isinstance(cost, TargetUnitaryInfidelity):
-                #print('cost is unitary')
                 cost_error = cost.cost(controls, unitaries, final_system_eval_step)
             else:
-                #print('cost is state')
                 cost_error = cost.cost(controls, states, final_system_eval_step)
             
             error = error + cost_error
@@ -523,7 +517,6 @@ def _evolve_step_schroedinger_discrete_unitary(dt,
     magnus = dt * a1
     step_unitary = jax.scipy.linalg.expm(magnus)
     states = jnp.matmul(step_unitary, states)
-    #densities = jnp.matmul(jnp.matmul(step_unitary, densities), conjugate_transpose(step_unitary))
     unitaries = jnp.matmul(step_unitary, unitaries)
     
     return (states, unitaries)   #(states, densities, unitaries)
