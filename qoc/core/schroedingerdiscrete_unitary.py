@@ -647,9 +647,9 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
     index_store=None
     state_store = None
     if pstate.use_custom_inner==1:
-        state_store=jnp.zeros((checkpoint_interval,UNITARY_SIZE,UNITARY_SIZE,
+        state_store=jnp.zeros((checkpoint_interval,1,UNITARY_SIZE,
                                1),dtype=states.dtype)
-        unitaries_store=jnp.zeros((checkpoint_interval,UNITARY_SIZE,UNITARY_SIZE
+        unitaries_store=jnp.zeros((checkpoint_interval,1,UNITARY_SIZE,UNITARY_SIZE
                                ),dtype=states.dtype)
         magnus_store=jnp.zeros((checkpoint_interval,
                         UNITARY_SIZE,UNITARY_SIZE),dtype=states.dtype)
@@ -751,7 +751,7 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
             states, f_matmul = jax.vjp(jnp.matmul,step_unitary, states)
             unitaries, f_matmul_densities = jax.vjp(jnp.matmul,step_unitary, unitaries)
         
-        controlsb = jnp.zeros(controls.shape, states.dtype)
+        controlsb = jnp.zeros(controls.shape, controls.dtype)
         #Begin U-Turn Go backwards in timesteps
         for i in range(stop-1,start-1,-1):
             time = i * dt
@@ -760,16 +760,12 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
             step_unitary, f_expm_grad = jax.vjp(jax.scipy.linalg.expm, magnus_store[i-start], has_aux=False)
             _, f_matmul = jax.vjp(jnp.matmul,step_unitary, state_store[i-start])
             _, f_matmul_unitaries = jax.vjp(jnp.matmul,step_unitary, unitaries_store[i-start])
-            step_unitaryb,densitiesb=f_matmul_unitaries(g_prod[1])
-            step_unitaryb,statesb=f_matmul(g_prod[0])
-            magnusb = f_expm_grad(step_unitaryb)
+            step_unitary1b,densitiesb=f_matmul_unitaries(jnp.stack(g_prod[1]))
+            step_unitary2b,statesb=f_matmul(g_prod[0])
+            magnusb = f_expm_grad(step_unitary1b+step_unitary2b)
             a1b=dt*magnusb[0]
             hamiltonian_b = jnp.conjugate(-1j)*a1b
-            controls1b=jnp.array((jnp.sum(jnp.conjugate(CONTROL_0)*hamiltonian_b) +
-               jnp.conjugate(jnp.sum(jnp.conjugate(CONTROL_0_DAGGER)*hamiltonian_b)),
-               jnp.sum(jnp.conjugate(CONTROL_1)*hamiltonian_b) +
-               jnp.conjugate(jnp.sum(jnp.conjugate(CONTROL_1_DAGGER)*hamiltonian_b))),
-               dtype=hamiltonian_b.dtype)
+            controls1b = jnp.real(jnp.sum(jnp.multiply(jnp.conjugate(CONTROL), hamiltonian_b[jnp.newaxis,:,:]),axis=(1,2),dtype=hamiltonian_b.dtype))
             tempb = (t1-control_eval_times[index-1])*controls1b/(control_eval_times[index]-control_eval_times[index-1])
             controlsb = controlsb.at[index-1].set(controlsb[index-1]+controls1b - tempb)
             controlsb = controlsb.at[index].set(controlsb[index]+tempb)
