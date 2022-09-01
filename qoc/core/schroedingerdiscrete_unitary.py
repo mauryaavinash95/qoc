@@ -702,7 +702,7 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
         return states, unitaries   #states, densities, unitaries
                                              
 
-    @jax.profiler.trace_function
+    #@jax.profiler.trace_function
     def _evaluate_schroedinger_discrete_loop_inner_custom_store_fwd_unitary(start, stop,cost_eval_step,
                                              dt,
                                              states,
@@ -726,7 +726,7 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
                                              start_states,
                                              start_unitaries,
                                              control_eval_times,controls)
-    @jax.profiler.trace_function
+    #@jax.profiler.trace_function
     def _evaluate_schroedinger_discrete_loop_inner_custom_store_bwd_unitary(res,g_prod):
         nonlocal index_store
         nonlocal magnus_store
@@ -791,7 +791,7 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
                                              control_eval_times,controls)
         return states, unitaries    #states,densities,unitaries
 
-    @jax.profiler.trace_function
+    #@jax.profiler.trace_function
     def _evaluate_schroedinger_discrete_loop_inner_custom_inv_fwd_unitary(start, stop,cost_eval_step,
                                              dt,
                                              states,
