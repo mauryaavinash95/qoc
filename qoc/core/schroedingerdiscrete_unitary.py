@@ -910,7 +910,7 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
             hamiltonian_ = SYSTEM_HAMILTONIAN + jnp.multiply( controls_[:, jnp.newaxis, jnp.newaxis], CONTROL ).sum(0)
             a1 = -1j * hamiltonian_
             magnus = dt * a1
-            step_unitary, f_expm_grad = jax.vjp(jax.scipy.linalg.expm, (magnus), has_aux=False)
+            step_unitary = jax.scipy.linalg.expm(magnus)
             #Exploit invertibility of unitary matrix and calculate previous sta
             step_unitary_inv = jnp.conj(jnp.transpose(step_unitary))
             states = (jnp.matmul(step_unitary_inv, states))
