@@ -816,8 +816,10 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
         start, stop, cost_eval_step, dt, states, unitaries, control_eval_times, controls = res
         #Go forward in timesteps storing the controls only
         _M2_C1 = 0.5
-        controlsb = jnp.zeros(controls.shape, states.dtype)
+        controlsb = jnp.zeros(controls.shape, controls.dtype)
         #Go backwards in timesteps
+        statesb = g_prod[0]
+        unitariesb = g_prod[1]
         for i in range(stop-1,start-1,-1):
             #Reapply controls to compute a step unitary matrix
             time = i * dt
@@ -840,16 +842,12 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
             _, f_matmul = jax.vjp(jnp.matmul, step_unitary, states)
             _, f_matmul_unitaries = jax.vjp(jnp.matmul, step_unitary, unitaries)
             #Go backwards for the timestep
-            step_unitaryb, unitariesb = f_matmul_unitaries(g_prod[1])
-            step_unitaryb,statesb = f_matmul(g_prod[0])
-            magnusb = f_expm_grad(step_unitaryb)
+            step_unitary1b, unitariesb = f_matmul_unitaries(g_prod[1])
+            step_unitary2b,statesb = f_matmul(g_prod[0])
+            magnusb = f_expm_grad(step_unitary1b+step_unitary2b)
             a1b = dt * magnusb[0]
             hamiltonian_b = jnp.conjugate(-1j)*a1b
-            controls1b=jnp.array((jnp.sum(jnp.conjugate(CONTROL_0) * hamiltonian_b) +
-               jnp.conjugate(jnp.sum(jnp.conjugate(CONTROL_0_DAGGER) * hamiltonian_b)),
-               jnp.sum(jnp.conjugate(CONTROL_1) * hamiltonian_b) +
-               jnp.conjugate(jnp.sum(jnp.conjugate(CONTROL_1_DAGGER) * hamiltonian_b))),
-               dtype=hamiltonian_b.dtype)
+            controls1b = jnp.real(jnp.sum(jnp.multiply(jnp.conjugate(CONTROL), hamiltonian_b[jnp.newaxis,:,:]),axis=(1,2),dtype=hamiltonian_b.dtype))
             tempb = (x-control_eval_times[index-1])*controls1b/(control_eval_times[index]-control_eval_times[index-1])
             controlsb = controlsb.at[index-1].set(controlsb[index-1]+controls1b - tempb)
             controlsb = controlsb.at[index].set(controlsb[index]+tempb)
