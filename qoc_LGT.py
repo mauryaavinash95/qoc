@@ -43,47 +43,62 @@ import matplotlib
 
 # Define the size of the system.
 argv = sys.argv[1:]
-QUBIT_COUNT = 6    #4
 CONTROL_EVAL_COUNT = int(1000)
 USE_CUSTOM_INNER = -1
 CHECKPOINT_INTERVAL = 10
+LENGTH = -1
+WIDTH = -1
+# how many controls we have
+CONTROL_COUNT = -1
+#Decide whether to use multilevel loopnest instead of single loop
+USE_MULTILEVEL=True
 try:
-    opts, args = getopt.getopt(argv,"hq:s:i:c:",["qubit="])
+    opts, args = getopt.getopt(argv,"hq:s:i:c:l:w:k:m:",["qubit="])
 except getopt.GetoptError:
-    print('test.py -q <qubit count> -s <step_count> -i <custom_inner=0/1/2>')
+    print('test.py -q <qubit count> -s <step_count> -i <custom_inner=0/1/2/3/4/5/6> -c <checkpoint interval> -l <lattice length> -w <lattice width> -k <control count> -m <use multilevel loop nest= True/False> ')
     sys.exit(2)
 for opt, arg in opts:
     if opt == '-h':
         print('test.py -q <qubit count> -s <steps>')
         sys.exit()
-    elif opt in ("-q", "--qubit"):
-        QUBIT_COUNT = int(arg)
     elif opt in ("-s", "--steps"):
         CONTROL_EVAL_COUNT = int(arg)
     elif opt in ("-i", "--custominner"):
         USE_CUSTOM_INNER = int(arg)
     elif opt in ("-c", "--checkpointinverval"):
         CHECKPOINT_INTERVAL = int(arg)
+    elif opt in ("-l", "--length"):
+        LENGTH = int(arg)
+    elif opt in ("-w", "--width"):
+        WIDTH = int(arg)
+    elif opt in ("-k", "--ctrl"):
+        CONTROL_COUNT = int(arg)
+    elif opt in ("-m", "--multilevel"):
+        USE_MULTILEVEL = bool(arg)
 
-if QUBIT_COUNT<1:
-    print("Must specify a QUBIT_COUNT > 0")
+if LENGTH<1:
+    print("Must specify a LENGTH > 0")
     sys.exit()
 
+if WIDTH<1:
+    print("Must specify a WIDTH > 0")
+    sys.exit()
+
+if CONTROL_COUNT<1:
+    print("Must specify a CONTROL_COUNT> 0")
+    sys.exit()
+
+QUBIT_COUNT = LENGTH*WIDTH
 HILBERT_SIZE = 2**QUBIT_COUNT
 
-LENGTH = 2
-WIDTH = 3
 # Additionally, we need to specify information to qoc about...
 # how long our system will evolve for
 EVOLUTION_TIME = 500 #15 #ns
-# how many controls we have
-CONTROL_COUNT = 6    #4
 # what domain our controls are in
 COMPLEX_CONTROLS = False
 # where our controls are positioned in time
 #CONTROL_EVAL_COUNT = int(1e3)
 # and where our system is evaluated in time
-#SYSTEM_EVAL_COUNT = iunitary_countnt(1e2)
 SYSTEM_EVAL_COUNT = CONTROL_EVAL_COUNT
 # Note that `CONTROL_COUNT` is the length of the `controls` array that is passed
 # to our `hamiltonian` function.
@@ -176,9 +191,6 @@ ITERATION_COUNT = 5
 # order optimizer, such as Adam, to achieve the desired error.
 # You can seed optimizations with a set of controls using the
 # `initial_controls` argument.
-
-#Decide whether to use multilevel loopnest instead of single loop
-USE_MULTILEVEL=False   #True
 
 #Decide whether to use custom derivatives for single step
 #when USE_MULTILEVEL is False
