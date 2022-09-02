@@ -134,7 +134,7 @@ DEVICE_HAMILTONIAN = ( 0.5 * single_qubit_terms_2(LENGTH, WIDTH, sigma = np.arra
                    + 0.25 * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmax().data.toarray()) )
                    + 0.25 * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmay().data.toarray()) )  )
 
-CONTROL = 0.5 * single_qubit_terms_custom_2(LENGTH, WIDTH, CONTROL_COUNT, [0, 1, 2, 3, 4, 5, ], sigma = np.array(qt.operators.sigmax().data.toarray()) )
+CONTROL = 0.5 * single_qubit_terms_custom_2(LENGTH, WIDTH, CONTROL_COUNT, np.arange(CONTROL_COUNT), sigma = np.array(qt.operators.sigmax().data.toarray()) )
 
 def hamiltonian(controls, time):
     return (DEVICE_HAMILTONIAN + np.multiply( controls[:, np.newaxis, np.newaxis], CONTROL ).sum(0) )
