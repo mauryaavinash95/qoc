@@ -621,13 +621,13 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
     index_store=None
     state_store = None
     if pstate.use_custom_inner==1:
-      state_store=jnp.zeros((checkpoint_interval,UNITARY_SIZE,UNITARY_SIZE,
-                               1),dtype=states.dtype)
-      densities_store=jnp.zeros((checkpoint_interval,UNITARY_SIZE,UNITARY_SIZE
-                               ),dtype=states.dtype)
+      state_store=jnp.zeros((checkpoint_interval,1,UNITARY_SIZE,1,
+                             ),dtype=states.dtype)
+      densities_store=jnp.zeros((checkpoint_interval,1,UNITARY_SIZE,UNITARY_SIZE
+                             ),dtype=states.dtype)
       magnus_store=jnp.zeros((checkpoint_interval,
-                        UNITARY_SIZE,UNITARY_SIZE),dtype=states.dtype)
-      index_store=jnp.zeros((checkpoint_interval),dtype=jnp.integer)
+                      UNITARY_SIZE,UNITARY_SIZE),dtype=states.dtype)
+      index_store=jnp.zeros(checkpoint_interval,dtype=jnp.integer)
     
     def _evaluate_schroedinger_discrete_loop_inner(start, stop,cost_eval_step,
                                              dt,
