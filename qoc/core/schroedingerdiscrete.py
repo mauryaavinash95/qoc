@@ -713,9 +713,9 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
             step_unitary, f_expm_grad = jax.vjp(jax.scipy.linalg.expm, magnus_store[i-start], has_aux=False)
             _, f_matmul = jax.vjp(jnp.matmul,step_unitary, state_store[i-start])
             _, f_matmul_densities = jax.vjp(jnp.matmul,step_unitary, densities_store[i-start])
-            step_unitaryb,densitiesb=f_matmul_densities(g_prod[1])
-            step_unitaryb,statesb=f_matmul(g_prod[0])
-            magnusb = f_expm_grad(step_unitaryb)
+            step_unitary1b,densitiesb=f_matmul_densities(jnp.stack(g_prod[1]))
+            step_unitary2b,statesb=f_matmul(g_prod[0])
+            magnusb = f_expm_grad(step_unitary1b+step_unitary2b)
             a1b=dt*magnusb[0]
             hamiltonian_b = jnp.conjugate(-1j)*a1b
             controls1b=jnp.array((jnp.sum(jnp.conjugate(CONTROL_0)*hamiltonian_b) +
@@ -784,9 +784,9 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
             _, f_matmul = jax.vjp(jnp.matmul,step_unitary, states)
             _, f_matmul_densities = jax.vjp(jnp.matmul,step_unitary, densities)
             #Go backwards for the timestep
-            step_unitaryb,densitiesb=f_matmul_densities(g_prod[1])
-            step_unitaryb,statesb=f_matmul(g_prod[0])
-            magnusb = f_expm_grad(step_unitaryb)
+            step_unitary1b,densitiesb=f_matmul_densities(g_prod[1])
+            step_unitary2b,statesb=f_matmul(g_prod[0])
+            magnusb = f_expm_grad(step_unitary1b+step_unitary2b)
             a1b=dt*magnusb[0]
             hamiltonian_b = jnp.conjugate(-1j)*a1b
             controls1b=jnp.array((jnp.sum(jnp.conjugate(CONTROL_0)*hamiltonian_b) +
@@ -854,9 +854,9 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
         _, f_matmul_densities = jax.vjp(jnp.matmul,step_unitary, densities)
 
         #Go backwards for the timestep
-        step_unitaryb,densitiesb=f_matmul_densities(g_prod[1])
-        step_unitaryb,statesb=f_matmul(g_prod[0])
-        magnusb = f_expm_grad(step_unitaryb)
+        step_unitary1b,densitiesb=f_matmul_densities(g_prod[1])
+        step_unitary2b,statesb=f_matmul(g_prod[0])
+        magnusb = f_expm_grad(step_unitary1b+step_unitary2b)
         a1b=dt*magnusb[0]
         hamiltonian_b = jnp.conjugate(-1j)*a1b
         controls1b=jnp.array((jnp.sum(jnp.conjugate(CONTROL_0)*hamiltonian_b) +
