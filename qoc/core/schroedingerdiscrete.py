@@ -447,7 +447,12 @@ def _evaluate_schroedinger_discrete(controls, pstate, reporter):
     # Compute non-step-costs.
     for i, cost in enumerate(costs):
         if not cost.requires_step_evaluation:
-            cost_error = cost.cost(controls, states, final_system_eval_step)
+            if isinstance(cost, TargetDensityInfidelity):
+                cost_error = cost.cost(controls, densities, final_system_eval_step)
+            elif isinstance(cost, TargetDensityInfidelity):
+                cost_error = cost.cost(controls, densities, final_system_eval_step)
+            else:
+                cost_error = cost.cost(controls, states, final_system_eval_step)
             error = error + cost_error
 
     # Report reults.
@@ -587,10 +592,12 @@ def _evaluate_schroedinger_discrete_multilevel(controls, pstate, reporter):
     # Compute non-step-costs.
     for i, cost in enumerate(costs):
         if not cost.requires_step_evaluation:
-            if cost.cost == TargetDensityInfidelity.cost:
-              cost_error = cost.cost(controls, densities, final_system_eval_step)
+            if isinstance(cost, TargetDensityInfidelity):
+                cost_error = cost.cost(controls, densities, final_system_eval_step)
+            elif isinstance(cost, TargetDensityInfidelity):
+                cost_error = cost.cost(controls, densities, final_system_eval_step)
             else:
-              cost_error = cost.cost(controls, states, final_system_eval_step)
+                cost_error = cost.cost(controls, states, final_system_eval_step)
             error = error + cost_error
 
     # Report reults.
