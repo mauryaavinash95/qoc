@@ -130,17 +130,14 @@ SYSTEM_EVAL_COUNT = CONTROL_EVAL_COUNT
 # even if we only give qoc a single state. The `,` in np.stack((INITIAL_STATE_0`,`))
 # makes a difference.
 
-intial0 = jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128)
-INITIAL_STATES = matrix_to_column_vector_list(jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128))
+INITIAL_STATES=onp.expand_dims(onp.matrix(qt.rand_unitary(HILBERT_SIZE))[0], axis=2)
 assert(INITIAL_STATES.ndim == 3)
-density0 = np.matmul(intial0, conjugate_transpose(intial0))
-INITIAL_DENSITIES = np.stack((density0,), axis=0)[0]
+initial0 = jax.numpy.identity(HILBERT_SIZE,dtype=np.complex128)
+density0 = np.matmul(initial0, conjugate_transpose(initial0))
+INITIAL_DENSITIES = np.stack((density0,), axis=0)
 ranunit0=onp.matrix(qt.rand_unitary(HILBERT_SIZE))
-targetstates0=matrix_to_column_vector_list(ranunit0)
-TARGET_STATES=matrix_to_column_vector_list(ranunit0)
-target_density0 = np.matmul(ranunit0, conjugate_transpose(ranunit0))
-TARGET_DENSITIES = np.stack((target_density0,), axis=0)
-
+TARGET_STATES=onp.expand_dims(onp.matrix(qt.rand_unitary(HILBERT_SIZE))[0], axis=2)
+TARGET_DENSITIES = np.matmul(ranunit0, conjugate_transpose(ranunit0))
 
 # Costs are functions that we want qoc to minimize the output of.
 # In this example, we want to minimize the infidelity (maximize the fidelity) of
