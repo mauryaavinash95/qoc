@@ -1006,7 +1006,11 @@ def _evaluate_schroedinger_discrete_loop_outer_unitary(system_eval_count,cost_ev
         states, unitaries = inner_propagator(1, system_eval_count-1, cost_eval_step,
                                     dt,
                                     states, unitaries, control_eval_times,controls)
-    
+    elif pstate.use_custom_inner==7:
+        inner_propagator = _evaluate_schroedinger_discrete_loop_inner_custom_inv_jax_unitary
+        states, unitaries = inner_propagator(1, system_eval_count-1, cost_eval_step,
+                                    dt,
+                                    states, unitaries, control_eval_times,controls)
     else:
       inner_propagator = _evaluate_schroedinger_discrete_loop_inner_unitary
       if pstate.use_custom_inner==1:
