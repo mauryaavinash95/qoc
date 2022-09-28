@@ -9,7 +9,7 @@ from filelock import FileLock, Timeout
 import h5py
 import matplotlib
 if not "DISPLAY" in os.environ:
-    matplotlib.use("Agg")
+    matplotlib.use("TkAgg")
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
