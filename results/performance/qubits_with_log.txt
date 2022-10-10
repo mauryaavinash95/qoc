@@ -1,0 +1,62 @@
+##### Execution Time inner 1  checkpoint distance  22
+2 1 332.3448 
+2 2 326.6216 
+2 3 344.3579 
+2 4 389.6075 
+2 5 768.0667 
+2 6 2 7 grep: out_q_2_7_22_1.txt: No such file or directory
+##### Execution Time inner 3  checkpoint distance  22
+2 1 197.3237 
+2 2 198.8083 
+2 3 203.2433 
+2 4 2 5 2 6 2 7 ##### Execution Time inner 4  checkpoint distance  22
+2 1 249.1342 
+2 2 255.1297 
+2 3 256.7369 
+2 4 289.3923 
+2 5 555.4589 
+2 6 2 7 ##### Memory inner 1  checkpoint distance  22
+Main binary filename not available.
+Main binary filename not available.
+Main binary filename not available.
+Main binary filename not available.
+Main binary filename not available.
+memory_2_6_500_22_1.prof: open memory_2_6_500_22_1.prof: no such file or directory
+failed to fetch any source profiles
+memory_2_7_500_22_1.prof: open memory_2_7_500_22_1.prof: no such file or directory
+failed to fetch any source profiles
+=1551.06/(1024*1024)
+=3339.79/(1024*1024)
+=25582.19/(1024*1024)
+=381834.50/(1024*1024)
+=6130696.94/(1024*1024)
+==##### Memory inner 3  checkpoint distance  22
+Main binary filename not available.
+Main binary filename not available.
+Main binary filename not available.
+memory_2_4_500_22_3.prof: open memory_2_4_500_22_3.prof: no such file or directory
+failed to fetch any source profiles
+memory_2_5_500_22_3.prof: open memory_2_5_500_22_3.prof: no such file or directory
+failed to fetch any source profiles
+memory_2_6_500_22_3.prof: open memory_2_6_500_22_3.prof: no such file or directory
+failed to fetch any source profiles
+memory_2_7_500_22_3.prof: open memory_2_7_500_22_3.prof: no such file or directory
+failed to fetch any source profiles
+=4319.05/(1024*1024)
+=55054.93/(1024*1024)
+=863688.65/(1024*1024)
+====##### Memory inner 4  checkpoint distance  22
+Main binary filename not available.
+Main binary filename not available.
+Main binary filename not available.
+Main binary filename not available.
+Main binary filename not available.
+memory_2_6_500_22_4.prof: open memory_2_6_500_22_4.prof: no such file or directory
+failed to fetch any source profiles
+memory_2_7_500_22_4.prof: open memory_2_7_500_22_4.prof: no such file or directory
+failed to fetch any source profiles
+=1126.28/(1024*1024)
+=1423.70/(1024*1024)
+=3908.02/(1024*1024)
+=44409.03/(1024*1024)
+=721057.63/(1024*1024)
