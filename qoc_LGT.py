@@ -51,7 +51,7 @@ WIDTH = -1
 # how many controls we have
 CONTROL_COUNT = -1
 #Decide whether to use multilevel loopnest instead of single loop
-USE_MULTILEVEL=False
+USE_MULTILEVEL=True
 try:
     opts, args = getopt.getopt(argv,"hq:s:i:c:l:w:k:m:",["qubit="])
 except getopt.GetoptError:
@@ -75,7 +75,6 @@ for opt, arg in opts:
         CONTROL_COUNT = int(arg)
     elif opt in ("-m", "--multilevel"):
         USE_MULTILEVEL = bool(arg)
-'''
 if LENGTH<1:
     print("Must specify a LENGTH > 0")
     sys.exit()
@@ -84,13 +83,14 @@ if WIDTH<1:
     print("Must specify a WIDTH > 0")
     sys.exit()
 
-if CONTROL_COUNT<1:
-    print("Must specify a CONTROL_COUNT> 0")
-    sys.exit()
+#if CONTROL_COUNT<1:
+#    print("Must specify a CONTROL_COUNT> 0")
+#    sys.exit()
 
 QUBIT_COUNT = LENGTH*WIDTH
+CONTROL_COUNT = QUBIT_COUNT
 HILBERT_SIZE = 2**QUBIT_COUNT
-
+'''
 # Additionally, we need to specify information to qoc about...
 # how long our system will evolve for
 EVOLUTION_TIME = 100 #15 #ns
@@ -134,6 +134,7 @@ SYSTEM_EVAL_COUNT = CONTROL_EVAL_COUNT
 #matvals=qt.rand_herm(HILBERT_SIZE).data
 
 hamil=1011
+"""
 match hamil:
     case 1:
         # There are 4 qubits, 4 controls, so:
@@ -191,32 +192,38 @@ match hamil:
         ITERATION_COUNT = 10000
         # 00001_2D_LatticeGauge_simulation_XandY_controlseparately.h5
     case 1011:
-        # There are 4 qubits, 4 controls, so:
-        QUBIT_COUNT = 4
-        CONTROL_COUNT = 4
-        LENGTH = 2
-        WIDTH = 2
+"""
+# There are 4 qubits, 4 controls, so:
+"""
+QUBIT_COUNT = 4
+ONTROL_COUNT = 4
+LENGTH = 2
+ WIDTH = 2
+"""
+# EVOLUTION_TIME = 100 ns suffices:
+#CONTROL_EVAL_COUNT = int(500)
+EVOLUTION_TIME = 100
 
-        # EVOLUTION_TIME = 100 ns suffices:
-        CONTROL_EVAL_COUNT = int(500)
-        EVOLUTION_TIME = 100
-
-        # Device Hamiltonian of 4 qubits:
-        DEVICE_HAMILTONIAN = ( 
+# Device Hamiltonian of 4 qubits:
+DEVICE_HAMILTONIAN = ( 
                     -0.02 * 2 * np.pi * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmax().data.toarray()) )
                     -0.02 * 2 * np.pi * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmay().data.toarray()) )  )
 
-        # Control all the 4 qubits:
-        CONTROL = 0.5 * single_qubit_terms_custom_2(LENGTH, WIDTH, CONTROL_COUNT, [0, 1, 2, 3, ], sigma = np.array(qt.operators.sigmax().data.toarray()) )
+# Control all the 4 qubits:
+CONTROL = 0.5 * single_qubit_terms_custom_2(LENGTH, WIDTH, CONTROL_COUNT, np.arange(CONTROL_COUNT), sigma = np.array(qt.operators.sigmax().data.toarray()) )
 
-        # Model Hamiltonian and Target Unitary
-        coupling_J = 1.0 
-        MODEL_HAMILTONIAN = - coupling_J * plaquette_terms_2(LENGTH, WIDTH )
-        Time_system = 0.01 #ns
-        TARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)], dtype=np.complex128)
-
-        ITERATION_COUNT = 1000
-        # 00001_2D_LatticeGauge_simulation_XandY_controlseparately.h5
+# Model Hamiltonian and Target Unitary
+"""
+coupling_J = 1.0 
+MODEL_HAMILTONIAN = - coupling_J * plaquette_terms_2(LENGTH, WIDTH )
+Time_system = 0.01 #ns
+ARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)], dtype=np.complex128)
+"""
+ITERATION_COUNT = 1000
+#ITERATION_COUNT = 20
+        
+# 00001_2D_LatticeGauge_simulation_XandY_controlseparately.h5
+'''
     case 2:
         # All other parameters are the same with Hamiltonian 1
 
@@ -418,7 +425,7 @@ match hamil:
 
         ITERATION_COUNT = 400
         # 00000_LGT_lattice2_cornerZ_and_plaqS_2by3_ctrlall6_3000pts_500ns_400iter_flat.h5
-
+'''
 HILBERT_SIZE = 2**QUBIT_COUNT
 
 def hamiltonian(controls, time):
@@ -513,7 +520,7 @@ print("COSTS",COSTS)
 '''
 # qoc saves data in h5 format. You can parse h5 files using the `h5py` package [5].
 #EXPERIMENT_NAME = "LGT_lattice1_cornerZ_and_plaqS_2by3_ctrlall6_1000pts_500ns_5iter"
-EXPERIMENT_NAME = "hamil1_10000_flat_"+str(USE_CUSTOM_INNER)+"_"
+EXPERIMENT_NAME = "hamil_"+str(CONTROL_EVAL_COUNT)+"_"+str(USE_CUSTOM_INNER)+"_"+str(LENGTH)+"_"+str(WIDTH)
 SAVE_PATH = "./out"
 H_SIMULATION_FILE_PATH = generate_save_file_path(EXPERIMENT_NAME, SAVE_PATH)
 
@@ -558,7 +565,7 @@ CONTROLS_PLOT_FILE_PATH = os.path.join(SAVE_PATH, CONTROLS_PLOT_FILE)
 ERROR_PLOT_FILE = "{}_infidelity.png".format(EXPERIMENT_NAME)
 ERROR_PLOT_FILE_PATH = os.path.join(SAVE_PATH, ERROR_PLOT_FILE)
 SHOW = False
-#jax.profiler.save_device_memory_profile("memory_"+str(QUBIT_COUNT)+"_"+str(CONTROL_EVAL_COUNT)+"_"+str(CHECKPOINT_INTERVAL)+"_"+str(USE_CUSTOM_INNER)+".prof")
+jax.profiler.save_device_memory_profile("memory_"+str(LENGTH)+"_"+str(WIDTH)+"_"+str(CONTROL_EVAL_COUNT)+"_"+str(CHECKPOINT_INTERVAL)+"_"+str(USE_CUSTOM_INNER)+".prof")
 #with open('/proc/self/status', 'r') as f:
 #    print(f.read())
 
