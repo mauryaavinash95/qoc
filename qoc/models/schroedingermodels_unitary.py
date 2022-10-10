@@ -313,7 +313,7 @@ class GrapeSchroedingerDiscreteStateUnitary(GrapeState):
                         save_file["error"] = jnp.repeat(jnp.finfo(jnp.float64).max, save_count)
                         save_file["evolution_time"]= self.evolution_time
                         save_file["final_states"] = jnp.zeros((save_count, state_count,
-                                                              self.hilbert_size, 1),
+                                                              self.initial_states.size, 1),
                                                              dtype=jnp.complex128)
                         save_file["grads"] = jnp.zeros((save_count, self.control_eval_count,
                                                        self.control_count), dtype=self.initial_controls.dtype)
