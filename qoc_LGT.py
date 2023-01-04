@@ -52,6 +52,7 @@ WIDTH = -1
 CONTROL_COUNT = -1
 #Decide whether to use multilevel loopnest instead of single loop
 USE_MULTILEVEL=True
+#USE_MULTILEVEL=False
 try:
     opts, args = getopt.getopt(argv,"hq:s:i:c:l:w:k:m:",["qubit="])
 except getopt.GetoptError:
@@ -87,7 +88,21 @@ if WIDTH<1:
 #    print("Must specify a CONTROL_COUNT> 0")
 #    sys.exit()
 
-QUBIT_COUNT = LENGTH*WIDTH
+if LENGTH==2:
+  if WIDTH==1:
+    QUBIT_COUNT=1
+  if WIDTH==2:
+    QUBIT_COUNT=4
+  if WIDTH==3:
+    QUBIT_COUNT=7
+  if WIDTH==4:
+    QUBIT_COUNT=10
+  if WIDTH==5:
+    QUBIT_COUNT=13
+
+if LENGTH==3:
+  QUBIT_COUNT=12
+#QUBIT_COUNT = LENGTH*WIDTH
 CONTROL_COUNT = QUBIT_COUNT
 HILBERT_SIZE = 2**QUBIT_COUNT
 '''
@@ -133,301 +148,24 @@ SYSTEM_EVAL_COUNT = CONTROL_EVAL_COUNT
 # that act on your system. Note that qoc supports both complex and real control parameters.
 #matvals=qt.rand_herm(HILBERT_SIZE).data
 
-hamil=1011
-"""
-match hamil:
-    case 1:
-        # There are 4 qubits, 4 controls, so:
-        QUBIT_COUNT = 4
-        CONTROL_COUNT = 4
-        LENGTH = 2
-        WIDTH = 2
-
-        # EVOLUTION_TIME = 100 ns suffices:
-        CONTROL_EVAL_COUNT = int(500)
-        EVOLUTION_TIME = 100
-
-        # Device Hamiltonian of 4 qubits:
-        DEVICE_HAMILTONIAN = ( 0.5 * single_qubit_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmaz().data.toarray()) )  
-                            + 0.25 * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmax().data.toarray()) )
-                            + 0.25 * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmay().data.toarray()) )  )
-        # Control all the 4 qubits:
-        CONTROL = 0.5 * single_qubit_terms_custom_2(LENGTH, WIDTH, CONTROL_COUNT, [0, 1, 2, 3, ], sigma = np.array(qt.operators.sigmax().data.toarray()) )
-        def hamiltonian(controls, time):
-            return (DEVICE_HAMILTONIAN + np.multiply( controls[:, np.newaxis, np.newaxis], CONTROL ).sum(0) )
-
-        # Model Hamiltonian and Target Unitary
-        coupling_J = 1.0 
-        MODEL_HAMILTONIAN = - coupling_J * plaquette_terms_2(LENGTH, WIDTH )
-        Time_system = 0.01 #ns
-        TARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)], dtype=np.complex128)
-
-        ITERATION_COUNT = 1000
-        # 00001_2D_LatticeGauge_simulation_XandY_controlseparately.h5            
-    case 101:
-        # There are 4 qubits, 4 controls, so:
-        QUBIT_COUNT = 4
-        CONTROL_COUNT = 4
-        LENGTH = 2
-        WIDTH = 2
-
-        # EVOLUTION_TIME = 100 ns suffices:
-        CONTROL_EVAL_COUNT = int(500)
-        EVOLUTION_TIME = 100
-
-        # Device Hamiltonian of 4 qubits:
-        DEVICE_HAMILTONIAN = ( 5.0 * 2* np.pi * single_qubit_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmaz().data.toarray()) ) 
-                    -0.02 * 2 * np.pi * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmax().data.toarray()) )
-                    -0.02 * 2 * np.pi * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmay().data.toarray()) )  )
-
-        # Control all the 4 qubits:
-        CONTROL = 0.5 * single_qubit_terms_custom_2(LENGTH, WIDTH, CONTROL_COUNT, [0, 1, 2, 3, ], sigma = np.array(qt.operators.sigmax().data.toarray()) )
-
-        # Model Hamiltonian and Target Unitary
-        coupling_J = 1.0 
-        MODEL_HAMILTONIAN = - coupling_J * plaquette_terms_2(LENGTH, WIDTH )
-        Time_system = 0.01 #ns
-        TARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)], dtype=np.complex128)
-
-        ITERATION_COUNT = 10000
-        # 00001_2D_LatticeGauge_simulation_XandY_controlseparately.h5
-    case 1011:
-"""
 # There are 4 qubits, 4 controls, so:
-"""
-QUBIT_COUNT = 4
-ONTROL_COUNT = 4
-LENGTH = 2
- WIDTH = 2
-"""
 # EVOLUTION_TIME = 100 ns suffices:
 #CONTROL_EVAL_COUNT = int(500)
 EVOLUTION_TIME = 100
-
 # Device Hamiltonian of 4 qubits:
-DEVICE_HAMILTONIAN = ( 
-                    -0.02 * 2 * np.pi * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmax().data.toarray()) )
-                    -0.02 * 2 * np.pi * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmay().data.toarray()) )  )
+DEVICE_HAMILTONIAN = (
+                    -0.02 * 2 * np.pi * corner_terms(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmax().data.toarray()) )
+                    -0.02 * 2 * np.pi * corner_terms(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmay().data.toarray()) )  )
 
 # Control all the 4 qubits:
-CONTROL = 0.5 * single_qubit_terms_custom_2(LENGTH, WIDTH, CONTROL_COUNT, np.arange(CONTROL_COUNT), sigma = np.array(qt.operators.sigmax().data.toarray()) )
+CONTROL = 0.5 * single_qubit_terms_custom(LENGTH, WIDTH, CONTROL_COUNT, np.arange(CONTROL_COUNT), sigma = np.array(qt.operators.sigmax().data.toarray()) )
 
-# Model Hamiltonian and Target Unitary
-"""
-coupling_J = 1.0 
-MODEL_HAMILTONIAN = - coupling_J * plaquette_terms_2(LENGTH, WIDTH )
-Time_system = 0.01 #ns
-ARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)], dtype=np.complex128)
-"""
-ITERATION_COUNT = 1000
-#ITERATION_COUNT = 20
+
+
+#ITERATION_COUNT = 1000
+ITERATION_COUNT = 10
         
-# 00001_2D_LatticeGauge_simulation_XandY_controlseparately.h5
-'''
-    case 2:
-        # All other parameters are the same with Hamiltonian 1
-
-        # Model Hamiltonian and Target Unitary
-        coupling_V = 1.0 
-        MODEL_HAMILTONIAN = coupling_V * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmaz().data.toarray()) )
-        Time_system = 0.01 #ns
-        TARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)], dtype=np.complex128)
-
-        ITERATION_COUNT = 1000
-        # 00002_2D_LatticeGauge_simulation_cornerZonly.h5
-
-    case 3:
-        # All other parameters are the same with Hamiltonian 1
-
-        # Model Hamiltonian and Target Unitary
-        coupling_J = 1.0 
-        coupling_V = 1.0 
-        MODEL_HAMILTONIAN = - coupling_J * plaquette_terms_2(LENGTH, WIDTH ) + coupling_V * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmaz().data.toarray()) )
-        Time_system = 0.01 #ns
-        TARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)], dtype=np.complex128)
-
-        ITERATION_COUNT = 1000
-        # 00000_2D_LatticeGauge_simulation_cornerZ_and_plaquettedagger.h5
-
-    case 4:
-        # There are 6 qubits, 2 controls, so:
-        QUBIT_COUNT = 6
-        CONTROL_COUNT = 2
-        LENGTH = 2
-        WIDTH = 3
-
-        # EVOLUTION_TIME = 100 ns:
-        CONTROL_EVAL_COUNT = int(500)
-        EVOLUTION_TIME = 100
-
-        # Device Hamiltonian of 6 qubits:
-        DEVICE_HAMILTONIAN = ( 0.5 * single_qubit_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmaz().data.toarray()) )  
-                            + 0.25 * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmax().data.toarray()) )
-                            + 0.25 * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmay().data.toarray()) )  )
-        # Control the 2 qubits at either short side:
-        CONTROL = 0.5 * single_qubit_terms_custom_2(LENGTH, WIDTH, CONTROL_COUNT, [0, 1, ], sigma = np.array(qt.operators.sigmax().data.toarray()) )
-        def hamiltonian(controls, time):
-            return (DEVICE_HAMILTONIAN + np.multiply( controls[:, np.newaxis, np.newaxis], CONTROL ).sum(0) )
-
-        # Model Hamiltonian and Target Unitary
-        coupling_J = 1.0 
-        coupling_V = 1.0 
-        MODEL_HAMILTONIAN = - coupling_J * plaquette_terms_2(LENGTH, WIDTH ) + coupling_V * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmaz().data.toarray()) )
-        Time_system = 0.01 #ns
-        TARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)], dtype=np.complex128)
-
-        ITERATION_COUNT = 1000
-        # 00000_2D_LGT_simulation_cornerZ_and_plaquetteS_model2by3_device0and1.h5
-
-    case 5:
-        # There are 6 qubits, 2 controls, so:
-        QUBIT_COUNT = 6
-        CONTROL_COUNT = 2
-        LENGTH = 2
-        WIDTH = 3
-
-        # EVOLUTION_TIME = 100 ns:
-        CONTROL_EVAL_COUNT = int(500)
-        EVOLUTION_TIME = 100
-
-        # Device Hamiltonian of 6 qubits:
-        DEVICE_HAMILTONIAN = ( 0.5 * single_qubit_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmaz().data.toarray()) )  
-                            + 0.25 * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmax().data.toarray()) )
-                            + 0.25 * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmay().data.toarray()) )  )
-        # Control the 2 qubits in the middle:
-        CONTROL = 0.5 * single_qubit_terms_custom_2(LENGTH, WIDTH, CONTROL_COUNT, [2, 3, ], sigma = np.array(qt.operators.sigmax().data.toarray()) )
-        def hamiltonian(controls, time):
-            return (DEVICE_HAMILTONIAN + np.multiply( controls[:, np.newaxis, np.newaxis], CONTROL ).sum(0) )
-
-        # Model Hamiltonian and Target Unitary
-        coupling_J = 1.0 
-        coupling_V = 1.0 
-        MODEL_HAMILTONIAN = - coupling_J * plaquette_terms_2(LENGTH, WIDTH ) + coupling_V * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmaz().data.toarray()) )
-        Time_system = 0.01 #ns
-        TARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)], dtype=np.complex128)
-
-        ITERATION_COUNT = 1000
-        # 00000_2D_LGT_simulation_cornerZ_and_plaquetteS_model2by3_device2and3.h5
-
-    case 6:
-        # There are 6 qubits, 6 controls, so:
-        QUBIT_COUNT = 6
-        CONTROL_COUNT = 6
-        LENGTH = 2
-        WIDTH = 3
-
-        # EVOLUTION_TIME = 100 ns:
-        CONTROL_EVAL_COUNT = int(500)
-        EVOLUTION_TIME = 100
-
-        # Device Hamiltonian of 6 qubits:
-        DEVICE_HAMILTONIAN = ( 0.5 * single_qubit_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmaz().data.toarray()) )  
-                            + 0.25 * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmax().data.toarray()) )
-                            + 0.25 * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmay().data.toarray()) )  )
-        # Control all the 6 qubits:
-        CONTROL = 0.5 * single_qubit_terms_custom_2(LENGTH, WIDTH, CONTROL_COUNT, [0, 1, 2, 3, 4, 5, ], sigma = np.array(qt.operators.sigmax().data.toarray()) )
-        def hamiltonian(controls, time):
-            return (DEVICE_HAMILTONIAN + np.multiply( controls[:, np.newaxis, np.newaxis], CONTROL ).sum(0) )
-
-        # Model Hamiltonian and Target Unitary
-        coupling_J = 1.0 
-        coupling_V = 1.0 
-        MODEL_HAMILTONIAN = - coupling_J * plaquette_terms_2(LENGTH, WIDTH ) + coupling_V * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmaz().data.toarray()) )
-        Time_system = 0.01 #ns
-        TARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)], dtype=np.complex128)
-
-        ITERATION_COUNT = 1000
-        # 00000_2D_LGT_simulation_cornerZ_and_plaquetteS_model2by3_deviceall6qubits.h5
-
-    case 7:
-        # All other parameters are the same with Hamiltonian 6
-
-        # EVOLUTION_TIME = 200 ns:
-        CONTROL_EVAL_COUNT = int(1000)
-        EVOLUTION_TIME = 200
-
-        # All other parameters are the same with Hamiltonian 6
-        # Defined the 6 CONTROLs separately
-
-        ITERATION_COUNT = 1000
-        # 00000_2D_LGT_simulation_cornerZ_and_plaquetteS_model2by3_deviceall6qubits_2.h5
-
-    case 8:
-        # All other parameters are the same with Hamiltonian 6
-
-        # EVOLUTION_TIME = 200 ns:
-        CONTROL_EVAL_COUNT = int(1000)
-        EVOLUTION_TIME = 200
-
-        # All other parameters are the same with Hamiltonian 6
-        # Defined the 6 CONTROLs in one list
-
-        ITERATION_COUNT = 1000
-        # 00000_2D_LGT_simulation_cornerZ_and_plaquetteS_model2by3_deviceall6qubits_control_list.h5
-
-    case 9:
-        # All other parameters are the same with Hamiltonian 5
-
-        # EVOLUTION_TIME = 300 ns:
-        CONTROL_EVAL_COUNT = int(1500)
-        EVOLUTION_TIME = 300
-
-        # All other parameters are the same with Hamiltonian 5
-
-        ITERATION_COUNT = 1000
-        # 00000_2D_LGT_simulation_cornerZ_and_plaquetteS_model2by3_devicemiddle2_1500pts_300ns.h5
-
-    case 10:
-        # All other parameters are the same with Hamiltonian 6
-
-        # EVOLUTION_TIME = 300 ns:
-        CONTROL_EVAL_COUNT = int(1500)
-        EVOLUTION_TIME = 300
-
-        # All other parameters are the same with Hamiltonian 6
-
-        ITERATION_COUNT = 1000
-        # 00000_2D_LGT_simulation_cornerZ_and_plaquetteS_model2by3_deviceall6qubits_1500pts_300ns.h5
-
-    case 11:
-        # All other parameters are the same with Hamiltonian 6
-
-        # EVOLUTION_TIME = 400 ns:
-        CONTROL_EVAL_COUNT = int(2400)
-        EVOLUTION_TIME = 400
-
-        # All other parameters are the same with Hamiltonian 6
-
-        ITERATION_COUNT = 400
-        # 00000_2D_LGT_simulation_cornerZ_and_plaquetteS_model2by3_deviceall6_2400pts_400ns.h5
-
-    case 12:
-        # All other parameters are the same with Hamiltonian 6
-
-        # EVOLUTION_TIME = 500 ns:
-        CONTROL_EVAL_COUNT = int(3000)
-        EVOLUTION_TIME = 500
-
-        # All other parameters are the same with Hamiltonian 6
-
-        ITERATION_COUNT = 1000
-        # 00000_LGT_lattice2_cornerZ_and_plaqS_2by3_ctrlall6_3000pts_500ns_1000iter.h5
-
-    case 13:
-        # All other parameters are the same with Hamiltonian 6
-
-        # EVOLUTION_TIME = 500 ns:
-        CONTROL_EVAL_COUNT = int(3000)
-        EVOLUTION_TIME = 500
-
-        # Initialized controls as flat rather than white noise
-        # All other parameters are the same with Hamiltonian 6
-
-        ITERATION_COUNT = 400
-        # 00000_LGT_lattice2_cornerZ_and_plaqS_2by3_ctrlall6_3000pts_500ns_400iter_flat.h5
-'''
 HILBERT_SIZE = 2**QUBIT_COUNT
-
 def hamiltonian(controls, time):
     return (DEVICE_HAMILTONIAN + np.multiply( controls[:, np.newaxis, np.newaxis], CONTROL ).sum(0) )
 # Now, we are ready to give qoc a problem.
@@ -456,8 +194,10 @@ TARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAM
 '''
 # for Hamiltonian 1, Equation 2, or
 #MODEL_HAMILTONIAN = - coupling_J * plaquette_terms_2(LENGTH, WIDTH )   
+MODEL_HAMILTONIAN = - coupling_J * plaquette_terms(LENGTH, WIDTH )   
 #  for Hamiltonian 2, Equation 5 
-MODEL_HAMILTONIAN = coupling_V * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmaz().data.toarray()) ) 
+#MODEL_HAMILTONIAN = coupling_V * corner_terms_2(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmaz().data.toarray()) ) 
+#MODEL_HAMILTONIAN = coupling_V * corner_terms(LENGTH, WIDTH, sigma = np.array(qt.operators.sigmaz().data.toarray()) ) 
 Time_system = 0.01 #ns
 TARGET_UNITARIES = np.array([jax.scipy.linalg.expm(-1j * Time_system * MODEL_HAMILTONIAN)], dtype=np.complex128)
 # Costs are functions that we want qoc to minimize the output of.
@@ -469,9 +209,9 @@ COSTS = [TargetUnitaryInfidelity(TARGET_UNITARIES), ]
 # We want to tell qoc how often to store information about the optimization
 # and how often to log output. Both `log_iteration_step` and `save_iteration_step`
 # are specified in units of optimization iterations.
-LOG_ITERATION_STEP = 1
+LOG_ITERATION_STEP = 0
 SAVE_INTERMEDIATE_STATES = False
-SAVE_ITERATION_STEP = 1  #0
+SAVE_ITERATION_STEP = 0  #0
 # set SAVE_ITERATION_STEP to 1 to save results
 
 # For this problem, the LBFGSB optimizer reaches a reasonable
@@ -568,7 +308,7 @@ SHOW = False
 jax.profiler.save_device_memory_profile("memory_"+str(LENGTH)+"_"+str(WIDTH)+"_"+str(CONTROL_EVAL_COUNT)+"_"+str(CHECKPOINT_INTERVAL)+"_"+str(USE_CUSTOM_INNER)+".prof")
 #with open('/proc/self/status', 'r') as f:
 #    print(f.read())
-
+"""
 # This function will plot the controls, and their fourier transform.
 plot_controls(H_SIMULATION_FILE_PATH,
               save_file_path=CONTROLS_PLOT_FILE_PATH,
@@ -579,6 +319,7 @@ plot_controls(H_SIMULATION_FILE_PATH,
 plot_error(H_SIMULATION_FILE_PATH,
               save_file_path=ERROR_PLOT_FILE_PATH,
               show=SHOW,)
+"""
 '''
 plot_state_population(H_SIMULATION_FILE_PATH,
                       save_file_path=POPULATION_PLOT_FILE_PATH,
