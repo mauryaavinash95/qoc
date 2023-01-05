@@ -243,8 +243,8 @@ POPULATION_PLOT_FILE = "{}_population.png".format(EXPERIMENT_NAME)
 POPULATION_PLOT_FILE_PATH = os.path.join(SAVE_PATH, POPULATION_PLOT_FILE)
 SHOW = True
 jax.profiler.save_device_memory_profile("memory_"+str(QUBIT_COUNT)+"_"+str(CONTROL_EVAL_COUNT)+"_"+str(CHECKPOINT_INTERVAL)+"_"+str(USE_CUSTOM_INNER)+".prof")
-with open('/proc/self/status', 'r') as f:
-    print(f.read())
+#with open('/proc/self/status', 'r') as f:
+#    print(f.read())
 '''
 # This function will plot the controls, and their fourier transform.
 plot_controls(SCHROED_FILE_PATH,
