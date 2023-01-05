@@ -684,7 +684,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
         return states, densities
                                              
 
-    @jax.profiler.trace_function
+    @jax.profiler.annotate_function
     def _evaluate_schroedinger_discrete_loop_inner_custom_store_fwd(start, stop,cost_eval_step,
                                              dt,
                                              states,densities,control_eval_times,controls):
@@ -699,7 +699,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
                                              dt,
                                              start_states, start_densities,
                                              control_eval_times,controls)
-    @jax.profiler.trace_function
+    @jax.profiler.annotate_function
     def _evaluate_schroedinger_discrete_loop_inner_custom_store_bwd(res,g_prod):
         nonlocal index_store
         nonlocal magnus_store
@@ -876,7 +876,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
                                              states,densities,control_eval_times,controls)
         return states,densities
 
-    @jax.profiler.trace_function
+    @jax.profiler.annotate_function
     def _evaluate_schroedinger_discrete_loop_inner_custom_inv_fwd(start, stop,cost_eval_step,
                                              dt,
                                              states,densities,control_eval_times,controls):
@@ -947,7 +947,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
                                              states,densities,control_eval_times,controls)
         return states,densities
 
-    @jax.profiler.trace_function
+    @jax.profiler.annotate_function
     def _evaluate_schroedinger_discrete_loop_inner_custom_inv_jax_fwd(start, stop,cost_eval_step,
                                              dt,
                                              states,densities,control_eval_times,controls):
@@ -960,7 +960,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count,cost_eval_step,
                                              states,densities,
                                              control_eval_times,controls)
     
-    @jax.profiler.trace_function
+    @jax.profiler.annotate_function
     def _evaluate_schroedinger_discrete_loop_inner_custom_inv_jax_bwd(res,g_prod):
         start, stop,cost_eval_step, dt, states,densities,control_eval_times,controls=res
         #Go forward in timesteps storing the controls only
