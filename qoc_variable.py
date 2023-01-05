@@ -47,11 +47,11 @@ CHECKPOINT_INTERVAL=10
 try:
   opts, args = getopt.getopt(argv,"hq:s:i:c:",["qubit="])
 except getopt.GetoptError:
-  print('test.py -q <qubit count> -s <step_count> -i <custom_inner=0/1/2>')
+  print('python qoc_variable.py -q <qubit count> -s <numer of timesteps> -c <checkpointinverval> -i <custom_inner=0/1/2/3/4/5/6/8>')
   sys.exit(2)
 for opt, arg in opts:
   if opt == '-h':
-    print('test.py -q <qubit count> -s <steps>')
+    print('python qoc_variable.py -q <qubit count> -s <numer of timesteps> -c <checkpointinverval> -i <custom_inner=0/1/2/3/4/5/6/8>')
     sys.exit()
   elif opt in ("-q", "--qubit"):
     QUBIT_COUNT = int(arg)
