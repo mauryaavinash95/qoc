@@ -655,15 +655,16 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count, cost_eval_step
                                     UNITARY_SIZE, UNITARY_SIZE), dtype=states.dtype)
         index_store = jnp.zeros(checkpoint_interval, dtype=jnp.integer)
         s_state = checkpoint_interval*UNITARY_SIZE*128
-        s_density = checkpoint_interval*UNITARY_SIZE*UNITARY_SIZE*128
+        s_density = checkpoint_interval*UNITARY_SIZE*UNITARY_SIZE*128 if pstate.use_custom_inner !=9 else 0
         s_index = checkpoint_interval*64
+        total_size = s_state+2*s_density+s_index # densities_store and magnus_store have same size
         print(f"Internal stores are of sizes (B) \
                 \nckpt_int: {checkpoint_interval} \
                 \nstate: {s_state} \
                 \ndensities: {s_density} \
                 \nmagnus: {s_density} \
                 \nindex: {s_index} \
-                \ntotal (MB) : {(s_state+s_density+s_density+s_index) >> 20}")
+                \ntotal (MB) : {total_size >> 20}")
 
     if pstate.use_custom_inner == 8 or pstate.use_custom_inner == 9:
         valslen = math.ceil(
@@ -680,15 +681,16 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count, cost_eval_step
         control_eval_times_so = control_eval_times
         controls_so = controls
         s_start = valslen*64
-        s_state = valslen*UNITARY_SIZE*128
-        s_density = valslen*UNITARY_SIZE*UNITARY_SIZE*128
+        s_state = valslen*UNITARY_SIZE*128 if pstate.use_custom_inner !=9 else 0
+        s_density = valslen*UNITARY_SIZE*UNITARY_SIZE*128 if pstate.use_custom_inner !=9 else 0
+        total_size = 2*s_start + s_state+s_density
         print(f"External stores are of sizes (B) \
             \nvalslen: {valslen} \
             \nstart: {s_start} \
             \nstop: {s_start} \
             \nstate: {s_state} \
             \ndensities: {s_density} \
-            \ntotal (MB): {(s_start+s_start+s_state+s_density) >> 20}")
+            \ntotal (MB): {total_size >> 20}")
 
     def _evaluate_schroedinger_discrete_loop_inner(start, stop, cost_eval_step,
                                                    dt,
@@ -819,6 +821,9 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count, cost_eval_step
     def _evaluate_schroedinger_discrete_loop_inner_custom_store_veloc_fwd_save(start, stop, cost_eval_step,
                                                                           dt,
                                                                           states, densities, control_eval_times, controls):
+        import time
+        millisec = time.time_ns() // 1000000
+        print(f"veloc save /dev/shm fwd : {millisec}", end=", ")
         nonlocal start_so
         nonlocal stop_so
         # nonlocal start_state_so
@@ -833,8 +838,8 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count, cost_eval_step
         start_so = start_so.at[outer_index].set(start)
         stop_so = stop_so.at[outer_index].set(stop)
 
-        print(f"Original states size: {states.size * states.itemsize}, shape: {states.shape}")
-        print(f"Original densitites size: {densities.size * densities.itemsize}, shape: {densities.shape}")
+        # print(f"Original states size: {states.size * states.itemsize}, shape: {states.shape}")
+        # print(f"Original densitites size: {densities.size * densities.itemsize}, shape: {densities.shape}")
 
         # start_state_so=start_state_so.at[outer_index].set(states)
         start_state_filename = f"/dev/shm/start_state_{outer_index}"
@@ -851,15 +856,20 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count, cost_eval_step
         control_eval_times_so = control_eval_times
         controls_so = controls
 
+        t = time.time_ns()
         states, densities = _evaluate_schroedinger_discrete_loop_inner(start, stop, cost_eval_step,
                                                                        dt,
                                                                        states, densities, control_eval_times, controls)
+        print(f"exec time: {time.time_ns()-t} ns")
         # Here we do not need to store the state for use in the backward pass
         return (states, densities), ()
 
 
     @jax.profiler.annotate_function
     def _evaluate_schroedinger_discrete_loop_inner_custom_store_veloc_bwd_save(res, g_prod):
+        import time as timee
+        millisec = timee.time_ns() // 1000000
+        print(f"veloc save /dev/shm bwd : {millisec}", end=", ")
         nonlocal index_store
         # nonlocal magnus_store
         nonlocal state_store
@@ -879,7 +889,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count, cost_eval_step
         _M2_C1 = 0.5
         # import time
         # print("BWD veloc", outer_index, time.time_ns())
-
+        t = timee.time_ns()
         start = start_so[outer_index]
         stop = stop_so[outer_index]
         # states=start_state_so[outer_index]
@@ -977,7 +987,7 @@ def _evaluate_schroedinger_discrete_loop_outer(system_eval_count, cost_eval_step
                                      1].set(controlsb[index-1]+controls1b - tempb)
             controlsb = controlsb.at[index].set(controlsb[index]+tempb)
             g_prod = (statesb, densitiesb)
-
+        print(f"exec time: {timee.time_ns()-t} ns")
         return (0.0, 0.0, 0.0, 0.0, statesb, densitiesb, 0.0, -1*controlsb)
 
     _evaluate_schroedinger_discrete_loop_inner_custom_store_veloc_save.defvjp(
